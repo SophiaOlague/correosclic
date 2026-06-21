@@ -1,0 +1,391 @@
+enum EstadoEnvio {
+  PENDIENTE_RECEPCION
+  RECIBIDO_SUCURSAL
+  CLASIFICADO
+  EN_TRANSITO
+  EN_SUCURSAL_DESTINO
+  EN_REPARTO
+  ENTREGADO
+  DEVUELTO
+  CANCELADO
+}
+
+//Envio
+
+model Envio {
+
+  id String
+    @id
+    @default(uuid())
+    @db.Uuid
+
+  pedidoId String
+    @db.Uuid
+
+  vendedorId String
+    @db.Uuid
+
+  sucursalOrigenId String
+    @db.Uuid
+
+  sucursalDestinoId String
+    @db.Uuid
+
+  trackingInterno String
+    @unique
+    @db.VarChar(50)
+
+  trackingOficial String?
+    @db.VarChar(100)
+
+  estado EstadoEnvio
+    @default(PENDIENTE_RECEPCION)
+
+  fechaEntregaEstimada DateTime?
+
+  fechaEntregaReal DateTime?
+
+  createdAt DateTime
+    @default(now())
+
+  updatedAt DateTime
+    @updatedAt
+
+  pedido Pedido
+    @relation(
+      fields: [pedidoId],
+      references: [id]
+    )
+
+  vendedor Vendedor
+    @relation(
+      fields: [vendedorId],
+      references: [id]
+    )
+
+  sucursalOrigen Sucursal
+    @relation(
+      "SucursalOrigenEnvio",
+      fields: [sucursalOrigenId],
+      references: [id]
+    )
+
+  sucursalDestino Sucursal
+    @relation(
+      "SucursalDestinoEnvio",
+      fields: [sucursalDestinoId],
+      references: [id]
+    )
+
+  items EnvioItem[]
+
+  eventosTracking EventoTracking[]
+
+  @@index([pedidoId])
+
+  @@index([vendedorId])
+
+  @@index([estado])
+
+  @@index([trackingInterno])
+
+  @@map("envios")
+}
+
+//EnvioItem
+
+model EnvioItem {
+
+  id String
+    @id
+    @default(uuid())
+    @db.Uuid
+
+  envioId String
+    @db.Uuid
+
+  pedidoItemId String
+    @db.Uuid
+
+  cantidad Int
+
+  createdAt DateTime
+    @default(now())
+
+  envio Envio
+    @relation(
+      fields: [envioId],
+      references: [id]
+    )
+
+  pedidoItem PedidoItem
+    @relation(
+      fields: [pedidoItemId],
+      references: [id]
+    )
+
+  @@unique([
+    envioId,
+    pedidoItemId
+  ])
+
+  @@index([envioId])
+
+  @@index([pedidoItemId])
+
+  @@map("envios_items")
+}
+
+//EventoTracking
+
+model EventoTracking {
+
+  id String
+    @id
+    @default(uuid())
+    @db.Uuid
+
+  envioId String
+    @db.Uuid
+
+  sucursalId String?
+    @db.Uuid
+
+  estado EstadoEnvio
+
+  descripcion String
+    @db.VarChar(255)
+
+  createdAt DateTime
+    @default(now())
+
+  envio Envio
+    @relation(
+      fields: [envioId],
+      references: [id]
+    )
+
+  sucursal Sucursal?
+    @relation(
+      fields: [sucursalId],
+      references: [id]
+    )
+
+  @@index([envioId])
+
+  @@index([sucursalId])
+
+  @@index([estado])
+
+  @@index([createdAt])
+
+  @@map("eventos_tracking")
+}
+
+//RecepcionSucursal
+
+model RecepcionSucursal {
+
+  id String
+    @id
+    @default(uuid())
+    @db.Uuid
+
+  envioId String
+    @unique
+    @db.Uuid
+
+  sucursalId String
+    @db.Uuid
+
+  empleadoId String
+    @db.Uuid
+
+  observaciones String?
+    @db.Text
+
+  createdAt DateTime
+    @default(now())
+
+  envio Envio
+    @relation(
+      fields: [envioId],
+      references: [id]
+    )
+
+  sucursal Sucursal
+    @relation(
+      fields: [sucursalId],
+      references: [id]
+    )
+
+  empleado Empleado
+    @relation(
+      fields: [empleadoId],
+      references: [id]
+    )
+
+  @@index([sucursalId])
+
+  @@map("recepciones_sucursal")
+}
+
+//TransferenciaSucursal
+
+model TransferenciaSucursal {
+
+  id String
+    @id
+    @default(uuid())
+    @db.Uuid
+
+  envioId String
+    @db.Uuid
+
+  sucursalOrigenId String
+    @db.Uuid
+
+  sucursalDestinoId String
+    @db.Uuid
+
+  fechaSalida DateTime
+
+  fechaLlegada DateTime?
+
+  createdAt DateTime
+    @default(now())
+
+  envio Envio
+    @relation(
+      fields: [envioId],
+      references: [id]
+    )
+
+  sucursalOrigen Sucursal
+    @relation(
+      "TransferenciaOrigen",
+      fields: [sucursalOrigenId],
+      references: [id]
+    )
+
+  sucursalDestino Sucursal
+    @relation(
+      "TransferenciaDestino",
+      fields: [sucursalDestinoId],
+      references: [id]
+    )
+
+  @@index([envioId])
+
+  @@map("transferencias_sucursal")
+}
+
+//ENTREGA
+
+model Entrega {
+
+  id String
+    @id
+    @default(uuid())
+    @db.Uuid
+
+  envioId String
+    @unique
+    @db.Uuid
+
+  repartidorId String
+    @db.Uuid
+
+  fechaAsignacion DateTime
+
+  fechaEntrega DateTime?
+
+  nombreRecibe String?
+    @db.VarChar(255)
+
+  fotoEntregaUrl String?
+    @db.Text
+
+  createdAt DateTime
+    @default(now())
+
+  envio Envio
+    @relation(
+      fields: [envioId],
+      references: [id]
+    )
+
+  repartidor Repartidor
+    @relation(
+      fields: [repartidorId],
+      references: [id]
+    )
+
+  intentos IntentoEntrega[]
+
+  @@index([repartidorId])
+
+  @@map("entregas")
+}
+
+//enum
+
+enum ResultadoIntentoEntrega {
+  EXITOSO
+  DESTINATARIO_AUSENTE
+  DIRECCION_INCORRECTA
+  RECHAZADO
+}
+
+//Intento Entrega
+
+model IntentoEntrega {
+
+  id String
+    @id
+    @default(uuid())
+    @db.Uuid
+
+  entregaId String
+    @db.Uuid
+
+  numeroIntento Int
+
+  resultado ResultadoIntentoEntrega
+
+  observaciones String?
+    @db.Text
+
+  fotoIntentoUrl String?
+    @db.Text
+
+  createdAt DateTime
+    @default(now())
+
+  entrega Entrega
+    @relation(
+      fields: [entregaId],
+      references: [id]
+    )
+
+  @@unique([
+    entregaId,
+    numeroIntento
+  ])
+
+  @@index([entregaId])
+
+  @@map("intentos_entrega")
+}
+
+//enum devolucion
+
+enum MotivoDevolucion {
+  NO_ENTREGADO
+  PRODUCTO_DANADO
+  RECHAZADO_CLIENTE
+  OTRO
+}
+
+//Devolucion
+

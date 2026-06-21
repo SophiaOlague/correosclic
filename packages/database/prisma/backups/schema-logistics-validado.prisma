@@ -1,0 +1,1318 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ProveedorExterno {
+GOOGLE
+}
+
+model Usuario {
+
+id String @id @default(uuid()) @db.Uuid
+
+email String @unique @db.VarChar(255)
+
+passwordHash String?
+
+nombre String @db.VarChar(100)
+
+apellidoPaterno String @db.VarChar(100)
+
+apellidoMaterno String? @db.VarChar(100)
+
+telefono String? @db.VarChar(20)
+
+emailVerificado Boolean @default(false)
+
+activo Boolean @default(true)
+
+createdAt DateTime @default(now())
+
+updatedAt DateTime @updatedAt
+
+deletedAt DateTime?
+
+sesiones Sesion[]
+
+usuarioRoles UsuarioRol[]
+
+cuentasExternas CuentaExterna[]
+
+empleado Empleado?
+
+cliente Cliente?
+
+vendedor Vendedor?
+
+@@index([activo])
+
+@@index([emailVerificado])
+
+@@map("usuarios")
+}
+
+model Rol {
+
+id String @id @default(uuid()) @db.Uuid
+
+codigo String @unique @db.VarChar(100)
+
+nombre String @db.VarChar(100)
+
+descripcion String?
+
+activo Boolean @default(true)
+
+createdAt DateTime @default(now())
+
+updatedAt DateTime @updatedAt
+
+usuarioRoles UsuarioRol[]
+
+rolPermisos RolPermiso[]
+
+@@map("roles")
+}
+
+model Permiso {
+
+id String @id @default(uuid()) @db.Uuid
+
+codigo String @unique @db.VarChar(150)
+
+nombre String @db.VarChar(150)
+
+descripcion String?
+
+createdAt DateTime @default(now())
+
+updatedAt DateTime @updatedAt
+
+rolPermisos RolPermiso[]
+
+@@map("permisos")
+}
+
+model UsuarioRol {
+
+usuarioId String @db.Uuid
+
+rolId String @db.Uuid
+
+asignadoAt DateTime @default(now())
+
+usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+rol Rol @relation(fields: [rolId], references: [id], onDelete: Cascade)
+
+@@id([usuarioId, rolId])
+
+@@map("usuarios_roles")
+}
+
+model RolPermiso {
+
+rolId String @db.Uuid
+
+permisoId String @db.Uuid
+
+rol Rol @relation(fields: [rolId], references: [id], onDelete: Cascade)
+
+permiso Permiso @relation(fields: [permisoId], references: [id], onDelete: Cascade)
+
+@@id([rolId, permisoId])
+
+@@map("roles_permisos")
+}
+
+model Sesion {
+
+id String @id @default(uuid()) @db.Uuid
+
+usuarioId String @db.Uuid
+
+refreshTokenHash String
+
+ipAddress String?
+
+userAgent String?
+
+expiraAt DateTime
+
+revocadaAt DateTime?
+
+createdAt DateTime @default(now())
+
+usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+@@index([usuarioId])
+
+@@index([expiraAt])
+
+@@map("sesiones")
+}
+
+model CuentaExterna {
+
+id String @id @default(uuid()) @db.Uuid
+
+usuarioId String @db.Uuid
+
+proveedor ProveedorExterno
+
+proveedorUsuarioId String @db.VarChar(255)
+
+email String? @db.VarChar(255)
+
+nombreMostrar String? @db.VarChar(255)
+
+avatarUrl String?
+
+createdAt DateTime @default(now())
+
+usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+@@unique([proveedor, proveedorUsuarioId])
+
+@@index([usuarioId])
+
+@@map("cuentas_externas")
+}
+
+// =====================================================
+// ORGANIZATION MODULE
+// - 02-ORGANIZATION
+// =====================================================
+
+model Pais {
+
+id String @id @default(uuid()) @db.Uuid
+
+nombre String @unique @db.VarChar(100)
+
+codigoIso2 String @unique @db.Char(2)
+
+codigoIso3 String @unique @db.Char(3)
+
+activo Boolean @default(true)
+
+createdAt DateTime @default(now())
+
+updatedAt DateTime @updatedAt
+
+estadosProvincias EstadoProvincia[]
+
+direcciones Direccion[]
+
+@@index([activo])
+
+@@map("paises")
+}
+
+model Region {
+
+id String @id @default(uuid()) @db.Uuid
+
+nombre String @unique @db.VarChar(100)
+
+descripcion String?
+
+activo Boolean @default(true)
+
+createdAt DateTime @default(now())
+
+updatedAt DateTime @updatedAt
+
+estadosProvincias EstadoProvincia[]
+
+@@index([activo])
+
+@@map("regiones")
+}
+
+model EstadoProvincia {
+
+id String @id @default(uuid()) @db.Uuid
+
+paisId String @db.Uuid
+
+regionId String? @db.Uuid
+
+nombre String @db.VarChar(100)
+
+codigo String? @db.VarChar(20)
+
+activo Boolean @default(true)
+
+createdAt DateTime @default(now())
+
+updatedAt DateTime @updatedAt
+
+pais Pais @relation(fields: [paisId], references: [id])
+
+region Region? @relation(fields: [regionId], references: [id])
+
+ciudades Ciudad[]
+
+direcciones Direccion[]
+
+@@unique([paisId, nombre])
+
+@@index([paisId])
+
+@@index([regionId])
+
+@@index([activo])
+
+@@map("estados_provincias")
+}
+
+model Ciudad {
+
+id String @id @default(uuid()) @db.Uuid
+
+estadoProvinciaId String @db.Uuid
+
+nombre String @db.VarChar(100)
+
+activo Boolean @default(true)
+
+createdAt DateTime @default(now())
+
+updatedAt DateTime @updatedAt
+
+estadoProvincia EstadoProvincia @relation(fields: [estadoProvinciaId], references: [id])
+
+codigosPostales CodigoPostal[]
+
+direcciones Direccion[]
+
+@@unique([estadoProvinciaId, nombre])
+
+@@index([estadoProvinciaId])
+
+@@index([activo])
+
+@@map("ciudades")
+}
+
+model CodigoPostal {
+
+id String @id @default(uuid()) @db.Uuid
+
+ciudadId String @db.Uuid
+
+codigo String @db.VarChar(10)
+
+activo Boolean @default(true)
+
+createdAt DateTime @default(now())
+
+updatedAt DateTime @updatedAt
+
+ciudad Ciudad @relation(fields: [ciudadId], references: [id])
+
+direcciones Direccion[]
+
+@@unique([ciudadId, codigo])
+
+@@index([ciudadId])
+
+@@index([activo])
+
+@@map("codigos_postales")
+}
+
+model Direccion {
+
+id String @id @default(uuid()) @db.Uuid
+
+paisId String @db.Uuid
+
+estadoProvinciaId String @db.Uuid
+
+ciudadId String @db.Uuid
+
+codigoPostalId String @db.Uuid
+
+alias String? @db.VarChar(100)
+
+calle String @db.VarChar(255)
+
+numeroExterior String @db.VarChar(30)
+
+numeroInterior String? @db.VarChar(30)
+
+colonia String? @db.VarChar(150)
+
+referencias String?
+
+direccionFormateada String?
+
+latitud Decimal @db.Decimal(11, 8)
+
+longitud Decimal @db.Decimal(12, 8)
+
+googlePlaceId String? @db.VarChar(255)
+
+createdAt DateTime @default(now())
+
+updatedAt DateTime @updatedAt
+
+pais Pais @relation(fields: [paisId], references: [id])
+
+estadoProvincia EstadoProvincia @relation(fields: [estadoProvinciaId], references: [id])
+
+ciudad Ciudad @relation(fields: [ciudadId], references: [id])
+
+codigoPostal CodigoPostal @relation(fields: [codigoPostalId], references: [id])
+
+sucursal Sucursal?
+
+direccionesCliente DireccionCliente[]
+
+pedidosEntrega Pedido[]
+
+@@index([paisId])
+
+@@index([estadoProvinciaId])
+
+@@index([ciudadId])
+
+@@index([codigoPostalId])
+
+@@index([googlePlaceId])
+
+@@map("direcciones")
+}
+
+//fase 2
+
+model Sucursal {
+
+id String @id @default(uuid()) @db.Uuid
+
+direccionId String @unique @db.Uuid
+
+codigo String @unique @db.VarChar(50)
+
+nombre String @db.VarChar(150)
+
+telefono String? @db.VarChar(20)
+
+email String? @db.VarChar(255)
+
+activa Boolean @default(true)
+
+createdAt DateTime @default(now())
+
+updatedAt DateTime @updatedAt
+
+direccion Direccion @relation(fields: [direccionId], references: [id])
+
+empleados Empleado[]
+
+vehiculos Vehiculo[]
+
+enviosOrigen Envio[] @relation("SucursalOrigenEnvio")
+
+enviosDestino Envio[] @relation("SucursalDestinoEnvio")
+
+eventosTracking EventoTracking[]
+
+recepciones RecepcionSucursal[]
+
+transferenciasOrigen TransferenciaSucursal[] @relation("TransferenciaOrigen")
+
+transferenciasDestino TransferenciaSucursal[] @relation("TransferenciaDestino")
+
+@@index([activa])
+
+@@map("sucursales")
+}
+
+model Empleado {
+
+id String @id @default(uuid()) @db.Uuid
+
+usuarioId String @unique @db.Uuid
+
+sucursalId String @db.Uuid
+
+numeroEmpleado String @unique @db.VarChar(50)
+
+puesto String @db.VarChar(100)
+
+fechaIngreso DateTime
+
+activo Boolean @default(true)
+
+createdAt DateTime @default(now())
+
+updatedAt DateTime @updatedAt
+
+usuario Usuario @relation(fields: [usuarioId], references: [id])
+
+sucursal Sucursal @relation(fields: [sucursalId], references: [id])
+
+repartidor Repartidor?
+
+recepcionesSucursal RecepcionSucursal[]
+
+@@index([sucursalId])
+
+@@index([activo])
+
+@@map("empleados")
+}
+
+model Repartidor {
+
+id String @id @default(uuid()) @db.Uuid
+
+empleadoId String @unique @db.Uuid
+
+numeroLicencia String @unique @db.VarChar(100)
+
+fechaVencimientoLicencia DateTime?
+
+activo Boolean @default(true)
+
+createdAt DateTime @default(now())
+
+updatedAt DateTime @updatedAt
+
+empleado Empleado @relation(fields: [empleadoId], references: [id])
+
+asignacionesVehiculo AsignacionVehiculo[]
+
+entregas Entrega[]
+
+@@index([activo])
+
+@@map("repartidores")
+}
+
+model Vehiculo {
+
+id String @id @default(uuid()) @db.Uuid
+
+sucursalId String @db.Uuid
+
+placas String @unique @db.VarChar(20)
+
+marca String @db.VarChar(100)
+
+modelo String @db.VarChar(100)
+
+anio Int
+
+capacidadKg Decimal @db.Decimal(10,2)
+
+activo Boolean @default(true)
+
+createdAt DateTime @default(now())
+
+updatedAt DateTime @updatedAt
+
+sucursal Sucursal @relation(fields: [sucursalId], references: [id])
+
+asignaciones AsignacionVehiculo[]
+
+@@index([sucursalId])
+
+@@index([activo])
+
+@@map("vehiculos")
+}
+
+model AsignacionVehiculo {
+
+id String @id @default(uuid()) @db.Uuid
+
+vehiculoId String @db.Uuid
+
+repartidorId String @db.Uuid
+
+fechaInicio DateTime
+
+fechaFin DateTime?
+
+createdAt DateTime @default(now())
+
+vehiculo Vehiculo @relation(fields: [vehiculoId], references: [id])
+
+repartidor Repartidor @relation(fields: [repartidorId], references: [id])
+
+@@index([vehiculoId])
+
+@@index([repartidorId])
+
+@@index([fechaInicio])
+
+@@map("asignaciones_vehiculo")
+}
+
+
+// =====================================================
+// MARKETPLACE MODULE
+// - 03.-marketplace
+// =====================================================
+
+enum EstadoSolicitudVendedor {
+PENDIENTE
+APROBADA
+RECHAZADA
+}
+
+model Cliente {
+
+id String @id @default(uuid()) @db.Uuid
+
+usuarioId String @unique @db.Uuid
+
+activo Boolean @default(true)
+
+createdAt DateTime @default(now())
+
+updatedAt DateTime @updatedAt
+
+usuario Usuario @relation(fields: [usuarioId], references: [id])
+
+direcciones DireccionCliente[]
+
+solicitudesVendedor SolicitudVendedor[]
+
+carrito Carrito?
+
+pedidos Pedido[]
+
+@@index([activo])
+
+@@map("clientes")
+}
+
+model DireccionCliente {
+
+id String @id @default(uuid()) @db.Uuid
+
+clienteId String @db.Uuid
+
+direccionId String @db.Uuid
+
+esPrincipal Boolean @default(false)
+
+createdAt DateTime @default(now())
+
+cliente Cliente @relation(fields: [clienteId], references: [id])
+
+direccion Direccion @relation(fields: [direccionId], references: [id])
+
+@@unique([clienteId, direccionId])
+
+@@index([clienteId])
+
+@@map("direcciones_cliente")
+}
+
+model SolicitudVendedor {
+
+id String @id @default(uuid()) @db.Uuid
+
+clienteId String @db.Uuid
+
+estado EstadoSolicitudVendedor @default(PENDIENTE)
+
+comentariosRevision String?
+
+fechaRevision DateTime?
+
+createdAt DateTime @default(now())
+
+updatedAt DateTime @updatedAt
+
+cliente Cliente @relation(fields: [clienteId], references: [id])
+
+documentos DocumentoVendedor[]
+
+informacionFiscal InformacionFiscal?
+
+vendedorAprobado Vendedor?
+
+@@index([clienteId])
+
+@@index([estado])
+
+@@map("solicitudes_vendedor")
+}
+
+model DocumentoVendedor {
+
+id String @id @default(uuid()) @db.Uuid
+
+solicitudVendedorId String @db.Uuid
+
+tipoDocumento String @db.VarChar(50)
+
+nombreArchivo String @db.VarChar(255)
+
+urlArchivo String
+
+createdAt DateTime @default(now())
+
+solicitudVendedor SolicitudVendedor @relation(fields: [solicitudVendedorId], references: [id])
+
+@@index([solicitudVendedorId])
+
+@@map("documentos_vendedor")
+}
+
+model InformacionFiscal {
+
+id String @id @default(uuid()) @db.Uuid
+
+solicitudVendedorId String @unique @db.Uuid
+
+rfc String @db.VarChar(20)
+
+razonSocial String @db.VarChar(255)
+
+regimenFiscal String @db.VarChar(255)
+
+createdAt DateTime @default(now())
+
+updatedAt DateTime @updatedAt
+
+solicitudVendedor SolicitudVendedor @relation(fields: [solicitudVendedorId], references: [id])
+
+@@index([rfc])
+
+@@map("informacion_fiscal")
+}
+
+model Vendedor {
+
+id String @id @default(uuid()) @db.Uuid
+
+usuarioId String @unique @db.Uuid
+
+solicitudAprobadaId String @unique @db.Uuid
+
+fechaAprobacion DateTime
+
+activo Boolean @default(true)
+
+createdAt DateTime @default(now())
+
+updatedAt DateTime @updatedAt
+
+usuario Usuario @relation(fields: [usuarioId], references: [id])
+
+solicitudAprobada SolicitudVendedor @relation(fields: [solicitudAprobadaId], references: [id])
+
+tienda Tienda?
+
+pedidoItems PedidoItem[]
+
+envios Envio[]
+
+@@index([activo])
+
+@@map("vendedores")
+}
+
+model Tienda {
+
+id String @id @default(uuid()) @db.Uuid
+
+vendedorId String @unique @db.Uuid
+
+codigoPublico String @unique @db.VarChar(50)
+
+nombre String @db.VarChar(255)
+
+descripcion String?
+
+logoUrl String?
+
+activa Boolean @default(true)
+
+createdAt DateTime @default(now())
+
+updatedAt DateTime @updatedAt
+
+vendedor Vendedor @relation(fields: [vendedorId], references: [id])
+
+productos Producto[]
+
+@@index([activa])
+
+@@map("tiendas")
+}
+
+model Categoria {
+
+id String @id @default(uuid()) @db.Uuid
+
+parentId String? @db.Uuid
+
+nombre String @db.VarChar(150)
+
+slug String @unique @db.VarChar(150)
+
+descripcion String?
+
+activa Boolean @default(true)
+
+createdAt DateTime @default(now())
+
+updatedAt DateTime @updatedAt
+
+parent Categoria? @relation("CategoriaJerarquia", fields: [parentId], references: [id])
+
+hijos Categoria[] @relation("CategoriaJerarquia")
+
+productos Producto[]
+
+@@index([parentId])
+
+@@index([activa])
+
+@@map("categorias")
+}
+
+model Producto {
+
+id String @id @default(uuid()) @db.Uuid
+
+tiendaId String @db.Uuid
+
+categoriaId String @db.Uuid
+
+codigoPublico String @unique @db.VarChar(50)
+
+nombre String @db.VarChar(255)
+
+descripcion String?
+
+pesoKg Decimal @db.Decimal(10,3)
+
+activo Boolean @default(true)
+
+createdAt DateTime @default(now())
+
+updatedAt DateTime @updatedAt
+
+tienda Tienda @relation(fields: [tiendaId], references: [id])
+
+categoria Categoria @relation(fields: [categoriaId], references: [id])
+
+imagenes ProductoImagen[]
+
+variantes ProductoVariante[]
+
+@@index([tiendaId])
+
+@@index([categoriaId])
+
+@@index([activo])
+
+@@map("productos")
+}
+
+model ProductoImagen {
+
+id String @id @default(uuid()) @db.Uuid
+
+productoId String @db.Uuid
+
+url String
+
+orden Int @default(1)
+
+esPrincipal Boolean @default(false)
+
+createdAt DateTime @default(now())
+
+producto Producto @relation(fields: [productoId], references: [id])
+
+@@index([productoId])
+
+@@map("productos_imagenes")
+}
+
+model Atributo {
+
+id String @id @default(uuid()) @db.Uuid
+
+nombre String @unique @db.VarChar(100)
+
+createdAt DateTime @default(now())
+
+valores ValorAtributo[]
+
+@@map("atributos")
+}
+
+model ValorAtributo {
+
+id String @id @default(uuid()) @db.Uuid
+
+atributoId String @db.Uuid
+
+valor String @db.VarChar(100)
+
+createdAt DateTime @default(now())
+
+atributo Atributo @relation(fields: [atributoId], references: [id])
+
+variantes ProductoVarianteValor[]
+
+@@unique([atributoId, valor])
+
+@@index([atributoId])
+
+@@map("valores_atributo")
+}
+
+model ProductoVariante {
+
+id String @id @default(uuid()) @db.Uuid
+
+productoId String @db.Uuid
+
+sku String @unique @db.VarChar(100)
+
+precio Decimal @db.Decimal(12,2)
+
+stock Int @default(0)
+
+pesoKg Decimal? @db.Decimal(10,3)
+
+activa Boolean @default(true)
+
+createdAt DateTime @default(now())
+
+updatedAt DateTime @updatedAt
+
+producto Producto @relation(fields: [productoId], references: [id])
+
+valores ProductoVarianteValor[]
+
+carritoItems CarritoItem[]
+
+pedidoItems PedidoItem[]
+
+@@index([productoId])
+
+@@index([activa])
+
+@@map("productos_variantes")
+}
+
+model ProductoVarianteValor {
+
+productoVarianteId String @db.Uuid
+
+valorAtributoId String @db.Uuid
+
+productoVariante ProductoVariante @relation(fields: [productoVarianteId], references: [id])
+
+valorAtributo ValorAtributo @relation(fields: [valorAtributoId], references: [id])
+
+@@id([productoVarianteId, valorAtributoId])
+
+@@map("productos_variantes_valores")
+}
+
+// =====================================================
+// COMMERCE MODULE
+// - 04.-commerce
+// =====================================================
+
+model Carrito {
+
+id String @id @default(uuid()) @db.Uuid
+
+clienteId String @unique @db.Uuid
+
+createdAt DateTime @default(now())
+
+updatedAt DateTime @updatedAt
+
+cliente Cliente @relation(fields: [clienteId], references: [id])
+
+items CarritoItem[]
+
+@@map("carritos")
+}
+
+model CarritoItem {
+
+id String @id @default(uuid()) @db.Uuid
+
+carritoId String @db.Uuid
+
+productoVarianteId String @db.Uuid
+
+cantidad Int
+
+createdAt DateTime @default(now())
+
+updatedAt DateTime @updatedAt
+
+carrito Carrito @relation(fields: [carritoId], references: [id])
+
+productoVariante ProductoVariante @relation(fields: [productoVarianteId], references: [id])
+
+@@unique([carritoId, productoVarianteId])
+
+@@index([carritoId])
+
+@@map("carritos_items")
+}
+
+enum EstadoPedido {
+PENDIENTE_PAGO
+PAGADO
+PREPARANDO
+ENVIADO
+ENTREGADO
+CANCELADO
+REEMBOLSADO
+}
+
+model Pedido {
+
+id String @id @default(uuid()) @db.Uuid
+
+clienteId String @db.Uuid
+
+direccionEntregaId String @db.Uuid
+
+codigoPedido String @unique @db.VarChar(50)
+
+estado EstadoPedido @default(PENDIENTE_PAGO)
+
+subtotal Decimal @db.Decimal(12,2)
+
+costoEnvio Decimal @db.Decimal(12,2)
+
+comisionCorreosClic Decimal @db.Decimal(12,2)
+
+totalVendedores Decimal @db.Decimal(12,2)
+
+total Decimal @db.Decimal(12,2)
+
+fechaPago DateTime?
+
+createdAt DateTime @default(now())
+
+updatedAt DateTime @updatedAt
+
+cliente Cliente @relation(fields: [clienteId], references: [id])
+
+direccionEntrega Direccion @relation(fields: [direccionEntregaId], references: [id])
+
+items PedidoItem[]
+
+envios Envio[]
+
+@@index([clienteId])
+
+@@index([estado])
+
+@@index([fechaPago])
+
+@@map("pedidos")
+}
+
+model PedidoItem {
+
+id String @id @default(uuid()) @db.Uuid
+
+pedidoId String @db.Uuid
+
+productoVarianteId String @db.Uuid
+
+vendedorId String @db.Uuid
+
+nombreTienda String @db.VarChar(255)
+
+nombreProducto String @db.VarChar(255)
+
+sku String @db.VarChar(100)
+
+cantidad Int
+
+precioUnitario Decimal @db.Decimal(12,2)
+
+subtotal Decimal @db.Decimal(12,2)
+
+createdAt DateTime @default(now())
+
+pedido Pedido @relation(fields: [pedidoId], references: [id])
+
+productoVariante ProductoVariante @relation(fields: [productoVarianteId], references: [id])
+
+vendedor Vendedor @relation(fields: [vendedorId], references: [id])
+
+enviosItems EnvioItem[]
+
+@@index([pedidoId])
+
+@@index([productoVarianteId])
+
+@@index([vendedorId])
+
+@@map("pedidos_items")
+}
+
+// =====================================================
+// LOGISTICS MODULE
+// - 05-logistics
+// =====================================================
+
+enum EstadoEnvio {
+PENDIENTE_RECEPCION
+RECIBIDO_SUCURSAL
+CLASIFICADO
+EN_TRANSITO
+EN_SUCURSAL_DESTINO
+EN_REPARTO
+ENTREGADO
+DEVUELTO
+CANCELADO
+}
+
+model Envio {
+
+id String @id @default(uuid()) @db.Uuid
+
+pedidoId String @db.Uuid
+
+vendedorId String @db.Uuid
+
+sucursalOrigenId String @db.Uuid
+
+sucursalDestinoId String @db.Uuid
+
+trackingInterno String @unique @db.VarChar(50)
+
+trackingOficial String? @db.VarChar(100)
+
+estado EstadoEnvio @default(PENDIENTE_RECEPCION)
+
+fechaEntregaEstimada DateTime?
+
+fechaEntregaReal DateTime?
+
+createdAt DateTime @default(now())
+
+updatedAt DateTime @updatedAt
+
+pedido Pedido @relation(fields: [pedidoId], references: [id])
+
+vendedor Vendedor @relation(fields: [vendedorId], references: [id])
+
+sucursalOrigen Sucursal @relation("SucursalOrigenEnvio", fields: [sucursalOrigenId], references: [id])
+
+sucursalDestino Sucursal @relation("SucursalDestinoEnvio", fields: [sucursalDestinoId], references: [id])
+
+items EnvioItem[]
+
+eventosTracking EventoTracking[]
+
+recepcionSucursal RecepcionSucursal?
+
+transferencias TransferenciaSucursal[]
+
+entrega Entrega?
+
+@@index([pedidoId])
+
+@@index([vendedorId])
+
+@@index([estado])
+
+@@index([trackingInterno])
+
+@@map("envios")
+}
+
+model EnvioItem {
+
+id String @id @default(uuid()) @db.Uuid
+
+envioId String @db.Uuid
+
+pedidoItemId String @db.Uuid
+
+cantidad Int
+
+createdAt DateTime @default(now())
+
+envio Envio @relation(fields: [envioId], references: [id])
+
+pedidoItem PedidoItem @relation(fields: [pedidoItemId], references: [id])
+
+@@unique([envioId, pedidoItemId])
+
+@@index([envioId])
+
+@@index([pedidoItemId])
+
+@@map("envios_items")
+}
+
+model EventoTracking {
+
+id String @id @default(uuid()) @db.Uuid
+
+envioId String @db.Uuid
+
+sucursalId String? @db.Uuid
+
+estado EstadoEnvio
+
+descripcion String @db.VarChar(255)
+
+createdAt DateTime @default(now())
+
+envio Envio @relation(fields: [envioId], references: [id])
+
+sucursal Sucursal? @relation(fields: [sucursalId], references: [id])
+
+@@index([envioId])
+
+@@index([sucursalId])
+
+@@index([estado])
+
+@@index([createdAt])
+
+@@map("eventos_tracking")
+}
+
+model RecepcionSucursal {
+
+id String @id @default(uuid()) @db.Uuid
+
+envioId String @unique @db.Uuid
+
+sucursalId String @db.Uuid
+
+empleadoId String @db.Uuid
+
+observaciones String?
+
+createdAt DateTime @default(now())
+
+envio Envio @relation(fields: [envioId], references: [id])
+
+sucursal Sucursal @relation(fields: [sucursalId], references: [id])
+
+empleado Empleado @relation(fields: [empleadoId], references: [id])
+
+@@index([sucursalId])
+
+@@map("recepciones_sucursal")
+}
+
+model TransferenciaSucursal {
+
+id String @id @default(uuid()) @db.Uuid
+
+envioId String @db.Uuid
+
+sucursalOrigenId String @db.Uuid
+
+sucursalDestinoId String @db.Uuid
+
+fechaSalida DateTime
+
+fechaLlegada DateTime?
+
+createdAt DateTime @default(now())
+
+envio Envio @relation(fields: [envioId], references: [id])
+
+sucursalOrigen Sucursal @relation("TransferenciaOrigen", fields: [sucursalOrigenId], references: [id])
+
+sucursalDestino Sucursal @relation("TransferenciaDestino", fields: [sucursalDestinoId], references: [id])
+
+@@index([envioId])
+
+@@map("transferencias_sucursal")
+}
+
+model Entrega {
+
+id String @id @default(uuid()) @db.Uuid
+
+envioId String @unique @db.Uuid
+
+repartidorId String @db.Uuid
+
+fechaAsignacion DateTime
+
+fechaEntrega DateTime?
+
+nombreRecibe String? @db.VarChar(255)
+
+fotoEntregaUrl String?
+
+createdAt DateTime @default(now())
+
+envio Envio @relation(fields: [envioId], references: [id])
+
+repartidor Repartidor @relation(fields: [repartidorId], references: [id])
+
+intentos IntentoEntrega[]
+
+@@index([repartidorId])
+
+@@map("entregas")
+}
+
+enum ResultadoIntentoEntrega {
+EXITOSO
+DESTINATARIO_AUSENTE
+DIRECCION_INCORRECTA
+RECHAZADO
+}
+
+model IntentoEntrega {
+
+id String @id @default(uuid()) @db.Uuid
+
+entregaId String @db.Uuid
+
+numeroIntento Int
+
+resultado ResultadoIntentoEntrega
+
+observaciones String?
+
+fotoIntentoUrl String?
+
+createdAt DateTime @default(now())
+
+entrega Entrega @relation(fields: [entregaId], references: [id])
+
+@@unique([entregaId, numeroIntento])
+
+@@index([entregaId])
+
+@@map("intentos_entrega")
+}

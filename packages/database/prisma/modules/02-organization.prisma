@@ -1,0 +1,353 @@
+// =====================================================
+// ORGANIZATION MODULE
+// - GEOGRAFÍA BASE
+// =====================================================
+
+model Pais {
+
+id String @id @default(uuid()) @db.Uuid
+
+nombre String @unique @db.VarChar(100)
+
+codigoIso2 String @unique @db.Char(2)
+
+codigoIso3 String @unique @db.Char(3)
+
+activo Boolean @default(true)
+
+createdAt DateTime @default(now())
+
+updatedAt DateTime @updatedAt
+
+estadosProvincias EstadoProvincia[]
+
+direcciones Direccion[]
+
+@@index([activo])
+
+@@map("paises")
+}
+
+model Region {
+
+id String @id @default(uuid()) @db.Uuid
+
+nombre String @unique @db.VarChar(100)
+
+descripcion String?
+
+activo Boolean @default(true)
+
+createdAt DateTime @default(now())
+
+updatedAt DateTime @updatedAt
+
+estadosProvincias EstadoProvincia[]
+
+@@index([activo])
+
+@@map("regiones")
+}
+
+model EstadoProvincia {
+
+id String @id @default(uuid()) @db.Uuid
+
+paisId String @db.Uuid
+
+regionId String? @db.Uuid
+
+nombre String @db.VarChar(100)
+
+codigo String? @db.VarChar(20)
+
+activo Boolean @default(true)
+
+createdAt DateTime @default(now())
+
+updatedAt DateTime @updatedAt
+
+pais Pais @relation(fields: [paisId], references: [id])
+
+region Region? @relation(fields: [regionId], references: [id])
+
+ciudades Ciudad[]
+
+direcciones Direccion[]
+
+@@unique([paisId, nombre])
+
+@@index([paisId])
+
+@@index([regionId])
+
+@@index([activo])
+
+@@map("estados_provincias")
+}
+
+model Ciudad {
+
+id String @id @default(uuid()) @db.Uuid
+
+estadoProvinciaId String @db.Uuid
+
+nombre String @db.VarChar(100)
+
+activo Boolean @default(true)
+
+createdAt DateTime @default(now())
+
+updatedAt DateTime @updatedAt
+
+estadoProvincia EstadoProvincia @relation(fields: [estadoProvinciaId], references: [id])
+
+codigosPostales CodigoPostal[]
+
+direcciones Direccion[]
+
+@@unique([estadoProvinciaId, nombre])
+
+@@index([estadoProvinciaId])
+
+@@index([activo])
+
+@@map("ciudades")
+}
+
+model CodigoPostal {
+
+id String @id @default(uuid()) @db.Uuid
+
+ciudadId String @db.Uuid
+
+codigo String @db.VarChar(10)
+
+activo Boolean @default(true)
+
+createdAt DateTime @default(now())
+
+updatedAt DateTime @updatedAt
+
+ciudad Ciudad @relation(fields: [ciudadId], references: [id])
+
+direcciones Direccion[]
+
+@@unique([ciudadId, codigo])
+
+@@index([ciudadId])
+
+@@index([activo])
+
+@@map("codigos_postales")
+}
+
+model Direccion {
+
+id String @id @default(uuid()) @db.Uuid
+
+paisId String @db.Uuid
+
+estadoProvinciaId String @db.Uuid
+
+ciudadId String @db.Uuid
+
+codigoPostalId String @db.Uuid
+
+alias String? @db.VarChar(100)
+
+calle String @db.VarChar(255)
+
+numeroExterior String @db.VarChar(30)
+
+numeroInterior String? @db.VarChar(30)
+
+colonia String? @db.VarChar(150)
+
+referencias String?
+
+direccionFormateada String?
+
+latitud Decimal @db.Decimal(11, 8)
+
+longitud Decimal @db.Decimal(12, 8)
+
+googlePlaceId String? @db.VarChar(255)
+
+createdAt DateTime @default(now())
+
+updatedAt DateTime @updatedAt
+
+pais Pais @relation(fields: [paisId], references: [id])
+
+estadoProvincia EstadoProvincia @relation(fields: [estadoProvinciaId], references: [id])
+
+ciudad Ciudad @relation(fields: [ciudadId], references: [id])
+
+codigoPostal CodigoPostal @relation(fields: [codigoPostalId], references: [id])
+
+sucursal Sucursal?
+
+@@index([paisId])
+
+@@index([estadoProvinciaId])
+
+@@index([ciudadId])
+
+@@index([codigoPostalId])
+
+@@index([googlePlaceId])
+
+@@map("direcciones")
+}
+
+//fase 2
+
+model Sucursal {
+
+id String @id @default(uuid()) @db.Uuid
+
+direccionId String @unique @db.Uuid
+
+codigo String @unique @db.VarChar(50)
+
+nombre String @db.VarChar(150)
+
+telefono String? @db.VarChar(20)
+
+email String? @db.VarChar(255)
+
+activa Boolean @default(true)
+
+createdAt DateTime @default(now())
+
+updatedAt DateTime @updatedAt
+
+direccion Direccion @relation(fields: [direccionId], references: [id])
+
+empleados Empleado[]
+
+vehiculos Vehiculo[]
+
+@@index([activa])
+
+@@map("sucursales")
+}
+
+model Empleado {
+
+id String @id @default(uuid()) @db.Uuid
+
+usuarioId String @unique @db.Uuid
+
+sucursalId String @db.Uuid
+
+numeroEmpleado String @unique @db.VarChar(50)
+
+puesto String @db.VarChar(100)
+
+fechaIngreso DateTime
+
+activo Boolean @default(true)
+
+createdAt DateTime @default(now())
+
+updatedAt DateTime @updatedAt
+
+usuario Usuario @relation(fields: [usuarioId], references: [id])
+
+sucursal Sucursal @relation(fields: [sucursalId], references: [id])
+
+repartidor Repartidor?
+
+@@index([sucursalId])
+
+@@index([activo])
+
+@@map("empleados")
+}
+
+model Repartidor {
+
+id String @id @default(uuid()) @db.Uuid
+
+empleadoId String @unique @db.Uuid
+
+numeroLicencia String @unique @db.VarChar(100)
+
+fechaVencimientoLicencia DateTime?
+
+activo Boolean @default(true)
+
+createdAt DateTime @default(now())
+
+updatedAt DateTime @updatedAt
+
+empleado Empleado @relation(fields: [empleadoId], references: [id])
+
+asignacionesVehiculo AsignacionVehiculo[]
+
+@@index([activo])
+
+@@map("repartidores")
+}
+
+model Vehiculo {
+
+id String @id @default(uuid()) @db.Uuid
+
+sucursalId String @db.Uuid
+
+placas String @unique @db.VarChar(20)
+
+marca String @db.VarChar(100)
+
+modelo String @db.VarChar(100)
+
+anio Int
+
+capacidadKg Decimal @db.Decimal(10,2)
+
+activo Boolean @default(true)
+
+createdAt DateTime @default(now())
+
+updatedAt DateTime @updatedAt
+
+sucursal Sucursal @relation(fields: [sucursalId], references: [id])
+
+asignaciones AsignacionVehiculo[]
+
+@@index([sucursalId])
+
+@@index([activo])
+
+@@map("vehiculos")
+}
+
+model AsignacionVehiculo {
+
+id String @id @default(uuid()) @db.Uuid
+
+vehiculoId String @db.Uuid
+
+repartidorId String @db.Uuid
+
+fechaInicio DateTime
+
+fechaFin DateTime?
+
+createdAt DateTime @default(now())
+
+vehiculo Vehiculo @relation(fields: [vehiculoId], references: [id])
+
+repartidor Repartidor @relation(fields: [repartidorId], references: [id])
+
+@@index([vehiculoId])
+
+@@index([repartidorId])
+
+@@index([fechaInicio])
+
+@@map("asignaciones_vehiculo")
+}

@@ -1,0 +1,223 @@
+//Enum EstadoPago
+
+enum EstadoPago {
+  PENDIENTE
+  EXITOSO
+  FALLIDO
+  REEMBOLSADO
+}
+
+//Enum estado REEMBOLO
+
+enum EstadoReembolso {
+  PENDIENTE
+  APROBADO
+  PROCESADO
+  RECHAZADO
+}
+
+//Pago
+
+model Pago {
+
+  id String
+    @id
+    @default(uuid())
+    @db.Uuid
+
+  pedidoId String
+    @db.Uuid
+
+  stripePaymentIntentId String?
+    @unique
+    @db.VarChar(255)
+
+  stripeChargeId String?
+    @unique
+    @db.VarChar(255)
+
+  estado EstadoPago
+    @default(PENDIENTE)
+
+  monto Decimal
+    @db.Decimal(12,2)
+
+  moneda String
+    @default("MXN")
+    @db.Char(3)
+
+  mensajeError String?
+    @db.Text
+
+  createdAt DateTime
+    @default(now())
+
+  updatedAt DateTime
+    @updatedAt
+
+  pedido Pedido
+    @relation(
+      fields: [pedidoId],
+      references: [id]
+    )
+
+  @@index([pedidoId])
+
+  @@index([estado])
+
+  @@map("pagos")
+}
+
+//Reembolso
+
+model Reembolso {
+
+  id String
+    @id
+    @default(uuid())
+    @db.Uuid
+
+  pedidoId String
+    @db.Uuid
+
+  estado EstadoReembolso
+    @default(PENDIENTE)
+
+  monto Decimal
+    @db.Decimal(12,2)
+
+  motivo String?
+    @db.Text
+
+  fechaProcesado DateTime?
+
+  stripeRefundId String?
+    @unique
+    @db.VarChar(255)
+
+  createdAt DateTime
+    @default(now())
+
+  updatedAt DateTime
+    @updatedAt
+
+  pedido Pedido
+    @relation(
+      fields: [pedidoId],
+      references: [id]
+    )
+
+  @@index([pedidoId])
+
+  @@index([estado])
+
+  @@map("reembolsos")
+}
+
+//Liquidacionn vendedor
+
+model LiquidacionVendedor {
+
+  id String
+    @id
+    @default(uuid())
+    @db.Uuid
+
+  vendedorId String
+    @db.Uuid
+
+  estado EstadoLiquidacion
+    @default(PENDIENTE)
+
+  fechaInicio DateTime
+
+  fechaFin DateTime
+
+  montoBruto Decimal
+    @db.Decimal(12,2)
+
+  comisionCorreosClic Decimal
+    @db.Decimal(12,2)
+
+  montoNeto Decimal
+    @db.Decimal(12,2)
+
+  fechaPago DateTime?
+
+  referenciaPago String?
+    @db.VarChar(255)
+
+  createdAt DateTime
+    @default(now())
+
+  updatedAt DateTime
+    @updatedAt
+
+  vendedor Vendedor
+    @relation(
+      fields: [vendedorId],
+      references: [id]
+    )
+
+  detalles LiquidacionVendedorDetalle[]
+
+  @@index([vendedorId])
+
+  @@index([estado])
+
+  @@map("liquidaciones_vendedores")
+}
+
+//LiquidacionVendedorDetalle
+
+model LiquidacionVendedorDetalle {
+
+  id String
+    @id
+    @default(uuid())
+    @db.Uuid
+
+  liquidacionVendedorId String
+    @db.Uuid
+
+  pedidoItemId String
+    @db.Uuid
+
+  monto Decimal
+    @db.Decimal(12,2)
+
+  createdAt DateTime
+    @default(now())
+
+  liquidacionVendedor LiquidacionVendedor
+    @relation(
+      fields: [liquidacionVendedorId],
+      references: [id]
+    )
+
+  pedidoItem PedidoItem
+    @relation(
+      fields: [pedidoItemId],
+      references: [id]
+    )
+
+  @@unique([
+    liquidacionVendedorId,
+    pedidoItemId
+  ])
+
+  @@index([liquidacionVendedorId])
+
+  @@index([pedidoItemId])
+
+  @@map("liquidaciones_vendedores_detalle")
+}
+
+//Estadoliquidacion
+
+enum EstadoLiquidacion {
+  PENDIENTE
+  PAGADA
+  CANCELADA
+}
+

@@ -1,0 +1,173 @@
+enum ProveedorExterno {
+GOOGLE
+}
+
+model Usuario {
+
+id String @id @default(uuid()) @db.Uuid
+
+email String @unique @db.VarChar(255)
+
+passwordHash String?
+
+nombre String @db.VarChar(100)
+
+apellidoPaterno String @db.VarChar(100)
+
+apellidoMaterno String? @db.VarChar(100)
+
+telefono String? @db.VarChar(20)
+
+emailVerificado Boolean @default(false)
+
+activo Boolean @default(true)
+
+createdAt DateTime @default(now())
+
+updatedAt DateTime @updatedAt
+
+deletedAt DateTime?
+
+sesiones Sesion[]
+
+usuarioRoles UsuarioRol[]
+
+cuentasExternas CuentaExterna[]
+
+empleado Empleado?
+
+@@index([activo])
+
+@@index([emailVerificado])
+
+@@map("usuarios")
+}
+
+model Rol {
+
+id String @id @default(uuid()) @db.Uuid
+
+codigo String @unique @db.VarChar(100)
+
+nombre String @db.VarChar(100)
+
+descripcion String?
+
+activo Boolean @default(true)
+
+createdAt DateTime @default(now())
+
+updatedAt DateTime @updatedAt
+
+usuarioRoles UsuarioRol[]
+
+rolPermisos RolPermiso[]
+
+@@map("roles")
+}
+
+model Permiso {
+
+id String @id @default(uuid()) @db.Uuid
+
+codigo String @unique @db.VarChar(150)
+
+nombre String @db.VarChar(150)
+
+descripcion String?
+
+createdAt DateTime @default(now())
+
+updatedAt DateTime @updatedAt
+
+rolPermisos RolPermiso[]
+
+@@map("permisos")
+}
+
+model UsuarioRol {
+
+usuarioId String @db.Uuid
+
+rolId String @db.Uuid
+
+asignadoAt DateTime @default(now())
+
+usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+rol Rol @relation(fields: [rolId], references: [id], onDelete: Cascade)
+
+@@id([usuarioId, rolId])
+
+@@map("usuarios_roles")
+}
+
+model RolPermiso {
+
+rolId String @db.Uuid
+
+permisoId String @db.Uuid
+
+rol Rol @relation(fields: [rolId], references: [id], onDelete: Cascade)
+
+permiso Permiso @relation(fields: [permisoId], references: [id], onDelete: Cascade)
+
+@@id([rolId, permisoId])
+
+@@map("roles_permisos")
+}
+
+model Sesion {
+
+id String @id @default(uuid()) @db.Uuid
+
+usuarioId String @db.Uuid
+
+refreshTokenHash String
+
+ipAddress String?
+
+userAgent String?
+
+expiraAt DateTime
+
+revocadaAt DateTime?
+
+createdAt DateTime @default(now())
+
+usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+@@index([usuarioId])
+
+@@index([expiraAt])
+
+@@map("sesiones")
+}
+
+model CuentaExterna {
+
+id String @id @default(uuid()) @db.Uuid
+
+usuarioId String @db.Uuid
+
+proveedor ProveedorExterno
+
+proveedorUsuarioId String @db.VarChar(255)
+
+email String? @db.VarChar(255)
+
+nombreMostrar String? @db.VarChar(255)
+
+avatarUrl String?
+
+createdAt DateTime @default(now())
+
+usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+@@unique([proveedor, proveedorUsuarioId])
+
+@@index([usuarioId])
+
+@@map("cuentas_externas")
+}
+

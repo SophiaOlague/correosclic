@@ -1,0 +1,215 @@
+//Carrito
+model Carrito {
+
+  id String
+    @id
+    @default(uuid())
+    @db.Uuid
+
+  clienteId String
+    @unique
+    @db.Uuid
+
+  createdAt DateTime
+    @default(now())
+
+  updatedAt DateTime
+    @updatedAt
+
+  cliente Cliente
+    @relation(
+      fields: [clienteId],
+      references: [id]
+    )
+
+  items CarritoItem[]
+
+  @@map("carritos")
+}
+
+//CarritoItem
+model CarritoItem {
+
+  id String
+    @id
+    @default(uuid())
+    @db.Uuid
+
+  carritoId String
+    @db.Uuid
+
+  productoVarianteId String
+    @db.Uuid
+
+  cantidad Int
+
+  createdAt DateTime
+    @default(now())
+
+  updatedAt DateTime
+    @updatedAt
+
+  carrito Carrito
+    @relation(
+      fields: [carritoId],
+      references: [id]
+    )
+
+  productoVariante ProductoVariante
+    @relation(
+      fields: [productoVarianteId],
+      references: [id]
+    )
+
+  @@unique([
+    carritoId,
+    productoVarianteId
+  ])
+
+  @@index([carritoId])
+
+  @@map("carritos_items")
+}
+
+enum EstadoPedido {
+  PENDIENTE_PAGO
+  PAGADO
+  PREPARANDO
+  ENVIADO
+  ENTREGADO
+  CANCELADO
+  REEMBOLSADO
+}
+
+//Pedido
+
+model Pedido {
+
+  id String
+    @id
+    @default(uuid())
+    @db.Uuid
+
+  clienteId String
+    @db.Uuid
+
+  direccionEntregaId String
+    @db.Uuid
+
+  codigoPedido String
+    @unique
+    @db.VarChar(50)
+
+  estado EstadoPedido
+    @default(PENDIENTE_PAGO)
+
+  subtotal Decimal
+    @db.Decimal(12,2)
+
+  costoEnvio Decimal
+    @db.Decimal(12,2)
+
+  comisionCorreosClic Decimal
+    @db.Decimal(12,2)
+
+  totalVendedores Decimal
+    @db.Decimal(12,2)
+
+  total Decimal
+    @db.Decimal(12,2)
+
+  fechaPago DateTime?
+
+  createdAt DateTime
+    @default(now())
+
+  updatedAt DateTime
+    @updatedAt
+
+  cliente Cliente
+    @relation(
+      fields: [clienteId],
+      references: [id]
+    )
+
+  direccionEntrega Direccion
+    @relation(
+      fields: [direccionEntregaId],
+      references: [id]
+    )
+
+  items PedidoItem[]
+
+  @@index([clienteId])
+
+  @@index([estado])
+
+  @@index([fechaPago])
+
+  @@map("pedidos")
+}
+
+//PedidoItem
+
+model PedidoItem {
+
+  id String
+    @id
+    @default(uuid())
+    @db.Uuid
+
+  pedidoId String
+    @db.Uuid
+
+  productoVarianteId String
+    @db.Uuid
+
+  vendedorId String
+    @db.Uuid
+
+  nombreTienda String
+    @db.VarChar(255)
+
+  nombreProducto String
+    @db.VarChar(255)
+
+  sku String
+    @db.VarChar(100)
+
+  cantidad Int
+
+  precioUnitario Decimal
+    @db.Decimal(12,2)
+
+  subtotal Decimal
+    @db.Decimal(12,2)
+
+  createdAt DateTime
+    @default(now())
+
+  pedido Pedido
+    @relation(
+      fields: [pedidoId],
+      references: [id]
+    )
+
+  productoVariante ProductoVariante
+    @relation(
+      fields: [productoVarianteId],
+      references: [id]
+    )
+
+  vendedor Vendedor
+    @relation(
+      fields: [vendedorId],
+      references: [id]
+    )
+
+  @@index([pedidoId])
+
+  @@index([productoVarianteId])
+
+  @@index([vendedorId])
+
+  @@map("pedidos_items")
+}

@@ -1,0 +1,579 @@
+enum EstadoSolicitudVendedor {
+  PENDIENTE
+  APROBADA
+  RECHAZADA
+}
+
+//CLIENTE
+
+model Cliente {
+
+  id String
+    @id
+    @default(uuid())
+    @db.Uuid
+
+  usuarioId String
+    @unique
+    @db.Uuid
+
+  activo Boolean
+    @default(true)
+
+  createdAt DateTime
+    @default(now())
+
+  updatedAt DateTime
+    @updatedAt
+
+  usuario Usuario
+    @relation(
+      fields: [usuarioId],
+      references: [id]
+    )
+
+  direcciones DireccionCliente[]
+
+  pedidos Pedido[]
+
+  carrito Carrito?
+
+  solicitudesVendedor SolicitudVendedor[]
+
+  @@index([activo])
+
+  @@map("clientes")
+}
+
+//DIRECCIÓN CLIENTE
+model DireccionCliente {
+
+  id String
+    @id
+    @default(uuid())
+    @db.Uuid
+
+  clienteId String
+    @db.Uuid
+
+  direccionId String
+    @db.Uuid
+
+  esPrincipal Boolean
+    @default(false)
+
+  createdAt DateTime
+    @default(now())
+
+  cliente Cliente
+    @relation(
+      fields: [clienteId],
+      references: [id]
+    )
+
+  direccion Direccion
+    @relation(
+      fields: [direccionId],
+      references: [id]
+    )
+
+  @@unique([clienteId, direccionId])
+
+  @@index([clienteId])
+
+  @@map("direcciones_cliente")
+}
+
+
+//SOLICITUD SolicitudVendedor
+
+model SolicitudVendedor {
+
+  id String
+    @id
+    @default(uuid())
+    @db.Uuid
+
+  clienteId String
+    @db.Uuid
+
+  estado EstadoSolicitudVendedor
+    @default(PENDIENTE)
+
+  comentariosRevision String?
+    @db.Text
+
+  fechaRevision DateTime?
+
+  createdAt DateTime
+    @default(now())
+
+  updatedAt DateTime
+    @updatedAt
+
+  cliente Cliente
+    @relation(
+      fields: [clienteId],
+      references: [id]
+    )
+
+  documentos DocumentoVendedor[]
+
+  informacionFiscal InformacionFiscal?
+
+  @@index([clienteId])
+
+  @@index([estado])
+
+  @@map("solicitudes_vendedor")
+}
+
+//DOCUMENTO DocumentoVendedor
+
+model DocumentoVendedor {
+
+  id String
+    @id
+    @default(uuid())
+    @db.Uuid
+
+  solicitudVendedorId String
+    @db.Uuid
+
+  tipoDocumento String
+    @db.VarChar(50)
+
+  nombreArchivo String
+    @db.VarChar(255)
+
+  urlArchivo String
+    @db.Text
+
+  createdAt DateTime
+    @default(now())
+
+  solicitudVendedor SolicitudVendedor
+    @relation(
+      fields: [solicitudVendedorId],
+      references: [id]
+    )
+
+  @@index([solicitudVendedorId])
+
+  @@map("documentos_vendedor")
+}
+
+//INFORMACIÓN InformacionFiscal
+
+model InformacionFiscal {
+
+  id String
+    @id
+    @default(uuid())
+    @db.Uuid
+
+  solicitudVendedorId String
+    @unique
+    @db.Uuid
+
+  rfc String
+    @db.VarChar(20)
+
+  razonSocial String
+    @db.VarChar(255)
+
+  regimenFiscal String
+    @db.VarChar(255)
+
+  createdAt DateTime
+    @default(now())
+
+  updatedAt DateTime
+    @updatedAt
+
+  solicitudVendedor SolicitudVendedor
+    @relation(
+      fields: [solicitudVendedorId],
+      references: [id]
+    )
+
+  @@index([rfc])
+
+  @@map("informacion_fiscal")
+}
+
+//VENDEDOR
+
+model Vendedor {
+
+  id String
+    @id
+    @default(uuid())
+    @db.Uuid
+
+  usuarioId String
+    @unique
+    @db.Uuid
+
+  solicitudAprobadaId String
+    @unique
+    @db.Uuid
+
+  fechaAprobacion DateTime
+
+  activo Boolean
+    @default(true)
+
+  createdAt DateTime
+    @default(now())
+
+  updatedAt DateTime
+    @updatedAt
+
+  usuario Usuario
+    @relation(
+      fields: [usuarioId],
+      references: [id]
+    )
+
+  solicitudAprobada SolicitudVendedor
+    @relation(
+      fields: [solicitudAprobadaId],
+      references: [id]
+    )
+
+  tienda Tienda?
+
+  @@index([activo])
+
+  @@map("vendedores")
+}
+
+//Tienda
+
+model Tienda {
+
+  id String
+    @id
+    @default(uuid())
+    @db.Uuid
+
+  vendedorId String
+    @unique
+    @db.Uuid
+
+  codigoPublico String
+    @unique
+    @db.VarChar(50)
+
+  nombre String
+    @db.VarChar(255)
+
+  descripcion String?
+    @db.Text
+
+  logoUrl String?
+    @db.Text
+
+  activa Boolean
+    @default(true)
+
+  createdAt DateTime
+    @default(now())
+
+  updatedAt DateTime
+    @updatedAt
+
+  vendedor Vendedor
+    @relation(
+      fields: [vendedorId],
+      references: [id]
+    )
+
+  productos Producto[]
+
+  @@index([activa])
+
+  @@map("tiendas")
+}
+
+//CATEGORIA
+
+model Categoria {
+
+  id String
+    @id
+    @default(uuid())
+    @db.Uuid
+
+  parentId String?
+    @db.Uuid
+
+  nombre String
+    @db.VarChar(150)
+
+  slug String
+    @unique
+    @db.VarChar(150)
+
+  descripcion String?
+    @db.Text
+
+  activa Boolean
+    @default(true)
+
+  createdAt DateTime
+    @default(now())
+
+  updatedAt DateTime
+    @updatedAt
+
+  parent Categoria?
+    @relation(
+      "CategoriaJerarquia",
+      fields: [parentId],
+      references: [id]
+    )
+
+  hijos Categoria[]
+    @relation("CategoriaJerarquia")
+
+  productos Producto[]
+
+  @@index([parentId])
+
+  @@index([activa])
+
+  @@map("categorias")
+}
+
+//Producto
+
+model Producto {
+
+  id String
+    @id
+    @default(uuid())
+    @db.Uuid
+
+  tiendaId String
+    @db.Uuid
+
+  categoriaId String
+    @db.Uuid
+
+  codigoPublico String
+    @unique
+    @db.VarChar(50)
+
+  nombre String
+    @db.VarChar(255)
+
+  descripcion String?
+    @db.Text
+
+  pesoKg Decimal
+    @db.Decimal(10,3)
+
+  activo Boolean
+    @default(true)
+
+  createdAt DateTime
+    @default(now())
+
+  updatedAt DateTime
+    @updatedAt
+
+  tienda Tienda
+    @relation(
+      fields: [tiendaId],
+      references: [id]
+    )
+
+  categoria Categoria
+    @relation(
+      fields: [categoriaId],
+      references: [id]
+    )
+
+  imagenes ProductoImagen[]
+
+  variantes ProductoVariante[]
+
+  @@index([tiendaId])
+
+  @@index([categoriaId])
+
+  @@index([activo])
+
+  @@map("productos")
+}
+
+//ProductoImagen
+
+model ProductoImagen {
+
+  id String
+    @id
+    @default(uuid())
+    @db.Uuid
+
+  productoId String
+    @db.Uuid
+
+  url String
+    @db.Text
+
+  orden Int
+    @default(1)
+
+  esPrincipal Boolean
+    @default(false)
+
+  createdAt DateTime
+    @default(now())
+
+  producto Producto
+    @relation(
+      fields: [productoId],
+      references: [id]
+    )
+
+  @@index([productoId])
+
+  @@map("productos_imagenes")
+}
+
+//atributo
+
+model Atributo {
+
+  id String
+    @id
+    @default(uuid())
+    @db.Uuid
+
+  nombre String
+    @unique
+    @db.VarChar(100)
+
+  createdAt DateTime
+    @default(now())
+
+  valores ValorAtributo[]
+
+  @@map("atributos")
+}
+
+//ValorAtributo
+
+model ValorAtributo {
+
+  id String
+    @id
+    @default(uuid())
+    @db.Uuid
+
+  atributoId String
+    @db.Uuid
+
+  valor String
+    @db.VarChar(100)
+
+  createdAt DateTime
+    @default(now())
+
+  atributo Atributo
+    @relation(
+      fields: [atributoId],
+      references: [id]
+    )
+
+  variantes ProductoVarianteValor[]
+
+  @@unique([atributoId, valor])
+
+  @@index([atributoId])
+
+  @@map("valores_atributo")
+}
+
+//ProductoVariante
+
+model ProductoVariante {
+
+  id String
+    @id
+    @default(uuid())
+    @db.Uuid
+
+  productoId String
+    @db.Uuid
+
+  sku String
+    @unique
+    @db.VarChar(100)
+
+  precio Decimal
+    @db.Decimal(12,2)
+
+  stock Int
+    @default(0)
+
+  pesoKg Decimal?
+    @db.Decimal(10,3)
+
+  activa Boolean
+    @default(true)
+
+  createdAt DateTime
+    @default(now())
+
+  updatedAt DateTime
+    @updatedAt
+
+  producto Producto
+    @relation(
+      fields: [productoId],
+      references: [id]
+    )
+
+  valores ProductoVarianteValor[]
+
+  @@index([productoId])
+
+  @@index([activa])
+
+  @@map("productos_variantes")
+}
+
+//ProductoVarianteValor
+
+model ProductoVarianteValor {
+
+  productoVarianteId String
+    @db.Uuid
+
+  valorAtributoId String
+    @db.Uuid
+
+  productoVariante ProductoVariante
+    @relation(
+      fields: [productoVarianteId],
+      references: [id]
+    )
+
+  valorAtributo ValorAtributo
+    @relation(
+      fields: [valorAtributoId],
+      references: [id]
+    )
+
+  @@id([
+    productoVarianteId,
+    valorAtributoId
+  ])
+
+  @@map("productos_variantes_valores")
+}
+
