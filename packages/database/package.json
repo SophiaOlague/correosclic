@@ -1,6 +1,10 @@
 {
-  "name": "database",
+  "name": "@correosclic/database",
   "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "packageManager": "pnpm@10.29.3",
   "scripts": {
     "generate": "prisma generate",
@@ -12,6 +16,7 @@
   },
   "dependencies": {
     "@prisma/client": "^7.8.0",
+    "dotenv": "^17.4.2",
     "prisma": "^7.8.0"
   }
 }
