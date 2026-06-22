@@ -36,6 +36,16 @@ cuentasExternas CuentaExterna[]
 
 empleado Empleado?
 
+cliente Cliente?
+
+vendedor Vendedor?
+
+dispositivosPush DispositivoPush[]
+
+notificaciones Notificacion[]
+
+auditorias Auditoria[]
+
 @@index([activo])
 
 @@index([emailVerificado])
@@ -170,4 +180,3 @@ usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Casca
 
 @@map("cuentas_externas")
 }
-

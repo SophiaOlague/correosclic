@@ -1,74 +1,52 @@
-//ConfiguraciónSistema
+// =====================================================
+// SYSTEM MODULE
+// - 08-SYSTEM
+// =====================================================
 
 model ConfiguracionSistema {
 
-  id String
-    @id
-    @default(uuid())
-    @db.Uuid
+id String @id @default(uuid()) @db.Uuid
 
-  clave String
-    @unique
-    @db.VarChar(100)
+clave String @unique @db.VarChar(100)
 
-  valor String
-    @db.Text
+valor String
 
-  descripcion String?
-    @db.Text
+descripcion String?
 
-  createdAt DateTime
-    @default(now())
+createdAt DateTime @default(now())
 
-  updatedAt DateTime
-    @updatedAt
+updatedAt DateTime @updatedAt
 
-  @@map("configuraciones_sistema")
+@@map("configuraciones_sistema")
 }
-
-//Auditoria
 
 model Auditoria {
 
-  id String
-    @id
-    @default(uuid())
-    @db.Uuid
+id String @id @default(uuid()) @db.Uuid
 
-  usuarioId String?
-    @db.Uuid
+usuarioId String? @db.Uuid
 
-  accion String
-    @db.VarChar(100)
+accion String @db.VarChar(100)
 
-  entidad String
-    @db.VarChar(100)
+entidad String @db.VarChar(100)
 
-  entidadId String?
-    @db.Uuid
+entidadId String? @db.Uuid
 
-  detalles String?
-    @db.Text
+detalles String?
 
-  ipAddress String?
-    @db.VarChar(100)
+ipAddress String? @db.VarChar(100)
 
-  createdAt DateTime
-    @default(now())
+createdAt DateTime @default(now())
 
-  usuario Usuario?
-    @relation(
-      fields: [usuarioId],
-      references: [id]
-    )
+usuario Usuario? @relation(fields: [usuarioId], references: [id])
 
-  @@index([usuarioId])
+@@index([usuarioId])
 
-  @@index([accion])
+@@index([accion])
 
-  @@index([entidad])
+@@index([entidad])
 
-  @@index([createdAt])
+@@index([createdAt])
 
-  @@map("auditoria")
+@@map("auditoria")
 }

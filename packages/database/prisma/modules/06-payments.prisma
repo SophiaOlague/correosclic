@@ -1,223 +1,146 @@
-//Enum EstadoPago
+// =====================================================
+// PAYMENTS MODULE
+// - 06-payments
+// =====================================================
 
 enum EstadoPago {
-  PENDIENTE
-  EXITOSO
-  FALLIDO
-  REEMBOLSADO
+PENDIENTE
+EXITOSO
+FALLIDO
+REEMBOLSADO
 }
-
-//Enum estado REEMBOLO
 
 enum EstadoReembolso {
-  PENDIENTE
-  APROBADO
-  PROCESADO
-  RECHAZADO
+PENDIENTE
+APROBADO
+PROCESADO
+RECHAZADO
 }
 
-//Pago
+enum EstadoLiquidacion {
+PENDIENTE
+PAGADA
+CANCELADA
+}
 
 model Pago {
 
-  id String
-    @id
-    @default(uuid())
-    @db.Uuid
+id String @id @default(uuid()) @db.Uuid
 
-  pedidoId String
-    @db.Uuid
+pedidoId String @db.Uuid
 
-  stripePaymentIntentId String?
-    @unique
-    @db.VarChar(255)
+stripePaymentIntentId String? @unique @db.VarChar(255)
 
-  stripeChargeId String?
-    @unique
-    @db.VarChar(255)
+stripeChargeId String? @unique @db.VarChar(255)
 
-  estado EstadoPago
-    @default(PENDIENTE)
+estado EstadoPago @default(PENDIENTE)
 
-  monto Decimal
-    @db.Decimal(12,2)
+monto Decimal @db.Decimal(12,2)
 
-  moneda String
-    @default("MXN")
-    @db.Char(3)
+moneda String @default("MXN") @db.Char(3)
 
-  mensajeError String?
-    @db.Text
+mensajeError String?
 
-  createdAt DateTime
-    @default(now())
+createdAt DateTime @default(now())
 
-  updatedAt DateTime
-    @updatedAt
+updatedAt DateTime @updatedAt
 
-  pedido Pedido
-    @relation(
-      fields: [pedidoId],
-      references: [id]
-    )
+pedido Pedido @relation(fields: [pedidoId], references: [id])
 
-  @@index([pedidoId])
+@@index([pedidoId])
 
-  @@index([estado])
+@@index([estado])
 
-  @@map("pagos")
+@@map("pagos")
 }
-
-//Reembolso
 
 model Reembolso {
 
-  id String
-    @id
-    @default(uuid())
-    @db.Uuid
+id String @id @default(uuid()) @db.Uuid
 
-  pedidoId String
-    @db.Uuid
+pedidoId String @db.Uuid
 
-  estado EstadoReembolso
-    @default(PENDIENTE)
+estado EstadoReembolso @default(PENDIENTE)
 
-  monto Decimal
-    @db.Decimal(12,2)
+monto Decimal @db.Decimal(12,2)
 
-  motivo String?
-    @db.Text
+motivo String?
 
-  fechaProcesado DateTime?
+fechaProcesado DateTime?
 
-  stripeRefundId String?
-    @unique
-    @db.VarChar(255)
+stripeRefundId String? @unique @db.VarChar(255)
 
-  createdAt DateTime
-    @default(now())
+createdAt DateTime @default(now())
 
-  updatedAt DateTime
-    @updatedAt
+updatedAt DateTime @updatedAt
 
-  pedido Pedido
-    @relation(
-      fields: [pedidoId],
-      references: [id]
-    )
+pedido Pedido @relation(fields: [pedidoId], references: [id])
 
-  @@index([pedidoId])
+@@index([pedidoId])
 
-  @@index([estado])
+@@index([estado])
 
-  @@map("reembolsos")
+@@map("reembolsos")
 }
-
-//Liquidacionn vendedor
 
 model LiquidacionVendedor {
 
-  id String
-    @id
-    @default(uuid())
-    @db.Uuid
+id String @id @default(uuid()) @db.Uuid
 
-  vendedorId String
-    @db.Uuid
+vendedorId String @db.Uuid
 
-  estado EstadoLiquidacion
-    @default(PENDIENTE)
+estado EstadoLiquidacion @default(PENDIENTE)
 
-  fechaInicio DateTime
+fechaInicio DateTime
 
-  fechaFin DateTime
+fechaFin DateTime
 
-  montoBruto Decimal
-    @db.Decimal(12,2)
+montoBruto Decimal @db.Decimal(12,2)
 
-  comisionCorreosClic Decimal
-    @db.Decimal(12,2)
+comisionCorreosClic Decimal @db.Decimal(12,2)
 
-  montoNeto Decimal
-    @db.Decimal(12,2)
+montoNeto Decimal @db.Decimal(12,2)
 
-  fechaPago DateTime?
+fechaPago DateTime?
 
-  referenciaPago String?
-    @db.VarChar(255)
+referenciaPago String? @db.VarChar(255)
 
-  createdAt DateTime
-    @default(now())
+createdAt DateTime @default(now())
 
-  updatedAt DateTime
-    @updatedAt
+updatedAt DateTime @updatedAt
 
-  vendedor Vendedor
-    @relation(
-      fields: [vendedorId],
-      references: [id]
-    )
+vendedor Vendedor @relation(fields: [vendedorId], references: [id])
 
-  detalles LiquidacionVendedorDetalle[]
+detalles LiquidacionVendedorDetalle[]
 
-  @@index([vendedorId])
+@@index([vendedorId])
 
-  @@index([estado])
+@@index([estado])
 
-  @@map("liquidaciones_vendedores")
+@@map("liquidaciones_vendedores")
 }
-
-//LiquidacionVendedorDetalle
 
 model LiquidacionVendedorDetalle {
 
-  id String
-    @id
-    @default(uuid())
-    @db.Uuid
+id String @id @default(uuid()) @db.Uuid
 
-  liquidacionVendedorId String
-    @db.Uuid
+liquidacionVendedorId String @db.Uuid
 
-  pedidoItemId String
-    @db.Uuid
+pedidoItemId String @db.Uuid
 
-  monto Decimal
-    @db.Decimal(12,2)
+monto Decimal @db.Decimal(12,2)
 
-  createdAt DateTime
-    @default(now())
+createdAt DateTime @default(now())
 
-  liquidacionVendedor LiquidacionVendedor
-    @relation(
-      fields: [liquidacionVendedorId],
-      references: [id]
-    )
+liquidacionVendedor LiquidacionVendedor @relation(fields: [liquidacionVendedorId], references: [id])
 
-  pedidoItem PedidoItem
-    @relation(
-      fields: [pedidoItemId],
-      references: [id]
-    )
+pedidoItem PedidoItem @relation(fields: [pedidoItemId], references: [id])
 
-  @@unique([
-    liquidacionVendedorId,
-    pedidoItemId
-  ])
+@@unique([liquidacionVendedorId, pedidoItemId])
 
-  @@index([liquidacionVendedorId])
+@@index([liquidacionVendedorId])
 
-  @@index([pedidoItemId])
+@@index([pedidoItemId])
 
-  @@map("liquidaciones_vendedores_detalle")
+@@map("liquidaciones_vendedores_detalle")
 }
-
-//Estadoliquidacion
-
-enum EstadoLiquidacion {
-  PENDIENTE
-  PAGADA
-  CANCELADA
-}
-

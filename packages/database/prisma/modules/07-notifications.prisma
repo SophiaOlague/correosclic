@@ -1,131 +1,102 @@
+// =====================================================
+// NOTIFICATIONS MODULE
+// - 07-NOTIFICATIONS
+// =====================================================
+
 enum TipoNotificacion {
-  PEDIDO
-  ENVIO
-  REEMBOLSO
-  SISTEMA
+PEDIDO
+ENVIO
+REEMBOLSO
+SISTEMA
 }
 
 enum PlataformaPush {
-  ANDROID
-  IOS
-  WEB
+ANDROID
+IOS
+WEB
 }
-
-//DispositivoPush
 
 model DispositivoPush {
 
-  id String
-    @id
-    @default(uuid())
-    @db.Uuid
+id String @id @default(uuid()) @db.Uuid
 
-  usuarioId String
-    @db.Uuid
+usuarioId String @db.Uuid
 
-  token String
-    @unique
-    @db.Text
+token String @unique
 
-  plataforma PlataformaPush
+plataforma PlataformaPush
 
-  activo Boolean
-    @default(true)
+activo Boolean @default(true)
 
-  createdAt DateTime
-    @default(now())
+createdAt DateTime @default(now())
 
-  updatedAt DateTime
-    @updatedAt
+updatedAt DateTime @updatedAt
 
-  usuario Usuario
-    @relation(
-      fields: [usuarioId],
-      references: [id]
-    )
+usuario Usuario @relation(fields: [usuarioId], references: [id])
 
-  @@index([usuarioId])
+@@index([usuarioId])
 
-  @@index([activo])
+@@index([activo])
 
-  @@map("dispositivos_push")
+@@map("dispositivos_push")
 }
-
-//PlantillaNotificación
 
 model PlantillaNotificacion {
 
-  id String
-    @id
-    @default(uuid())
-    @db.Uuid
+id String @id @default(uuid()) @db.Uuid
 
-  codigo String
-    @unique
-    @db.VarChar(100)
+codigo String @unique @db.VarChar(100)
 
-  nombre String
-    @db.VarChar(150)
+nombre String @db.VarChar(150)
 
-  titulo String
-    @db.VarChar(255)
+titulo String @db.VarChar(255)
 
-  mensaje String
-    @db.Text
+mensaje String
 
-  activa Boolean
-    @default(true)
+activa Boolean @default(true)
 
-  createdAt DateTime
-    @default(now())
+createdAt DateTime @default(now())
 
-  updatedAt DateTime
-    @updatedAt
+updatedAt DateTime @updatedAt
 
-  @@index([activa])
+notificaciones Notificacion[]
 
-  @@map("plantillas_notificaciones")
+@@index([activa])
+
+@@map("plantillas_notificaciones")
 }
-
-//Notificacion
 
 model Notificacion {
 
-  id String
-    @id
-    @default(uuid())
-    @db.Uuid
+id String @id @default(uuid()) @db.Uuid
 
-  usuarioId String
-    @db.Uuid
+usuarioId String @db.Uuid
 
-  tipo TipoNotificacion
+plantillaId String? @db.Uuid
 
-  titulo String
-    @db.VarChar(255)
+tipo TipoNotificacion
 
-  mensaje String
-    @db.Text
+titulo String @db.VarChar(255)
 
-  leida Boolean
-    @default(false)
+mensaje String
 
-  fechaLectura DateTime?
+leida Boolean @default(false)
 
-  createdAt DateTime
-    @default(now())
+fechaLectura DateTime?
 
-  usuario Usuario
-    @relation(
-      fields: [usuarioId],
-      references: [id]
-    )
+createdAt DateTime @default(now())
 
-  @@index([usuarioId])
+usuario Usuario @relation(fields: [usuarioId], references: [id])
 
-  @@index([tipo])
+plantilla PlantillaNotificacion? @relation(fields: [plantillaId], references: [id])
 
-  @@index([leida])
+@@index([usuarioId])
 
-  @@map("notificaciones")
+@@index([plantillaId])
+
+@@index([tipo])
+
+@@index([leida])
+
+@@map("notificaciones")
 }

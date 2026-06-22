@@ -1,6 +1,6 @@
 // =====================================================
 // ORGANIZATION MODULE
-// - GEOGRAFÍA BASE
+// - 02-ORGANIZATION
 // =====================================================
 
 model Pais {
@@ -188,6 +188,10 @@ codigoPostal CodigoPostal @relation(fields: [codigoPostalId], references: [id])
 
 sucursal Sucursal?
 
+direccionesCliente DireccionCliente[]
+
+pedidosEntrega Pedido[]
+
 @@index([paisId])
 
 @@index([estadoProvinciaId])
@@ -229,6 +233,18 @@ empleados Empleado[]
 
 vehiculos Vehiculo[]
 
+enviosOrigen Envio[] @relation("SucursalOrigenEnvio")
+
+enviosDestino Envio[] @relation("SucursalDestinoEnvio")
+
+eventosTracking EventoTracking[]
+
+recepciones RecepcionSucursal[]
+
+transferenciasOrigen TransferenciaSucursal[] @relation("TransferenciaOrigen")
+
+transferenciasDestino TransferenciaSucursal[] @relation("TransferenciaDestino")
+
 @@index([activa])
 
 @@map("sucursales")
@@ -260,6 +276,8 @@ sucursal Sucursal @relation(fields: [sucursalId], references: [id])
 
 repartidor Repartidor?
 
+recepcionesSucursal RecepcionSucursal[]
+
 @@index([sucursalId])
 
 @@index([activo])
@@ -286,6 +304,8 @@ updatedAt DateTime @updatedAt
 empleado Empleado @relation(fields: [empleadoId], references: [id])
 
 asignacionesVehiculo AsignacionVehiculo[]
+
+entregas Entrega[]
 
 @@index([activo])
 
