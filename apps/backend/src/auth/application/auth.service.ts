@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ConflictException, UnauthorizedException } from '@nestjs/common';
 
 import { PrismaService } from '../../prisma/prisma.service';
 import { PasswordService } from '../domain/services/password.service';
@@ -8,6 +8,8 @@ import { PasswordMismatchException } from '../domain/exceptions/password-mismatc
 import { EmailAlreadyExistsException } from '../domain/exceptions/email-already-exists.exception';
 import { UserRepository } from '../infrastructure/repositories/user.repository';
 import { TokenService } from '../domain/services/token.service';
+import { LoginDto } from '../dto/login.dto';
+
 
 @Injectable()
 export class AuthService {
@@ -67,6 +69,39 @@ return {
     apellidoPaterno: user.apellidoPaterno,
     apellidoMaterno: user.apellidoMaterno ?? undefined,
     roles,
+  },
+};
+}
+async login(dto: LoginDto) {
+  const user = await this.userRepository.findByEmailWithRoles(dto.email);
+
+if (!user || !user.passwordHash) {
+  throw new UnauthorizedException('Credenciales inválidas.');
+}
+
+const validPassword = await this.passwordService.compare(
+  dto.password,
+  user.passwordHash,
+);
+
+if (!validPassword) {
+  throw new UnauthorizedException('Credenciales inválidas.');
+}
+
+const accessToken = await this.tokenService.generateAccessToken({
+  sub: user.id,
+  email: user.email,
+});
+
+return {
+  accessToken,
+  user: {
+    id: user.id,
+    email: user.email,
+    nombre: user.nombre,
+    apellidoPaterno: user.apellidoPaterno,
+    apellidoMaterno: user.apellidoMaterno ?? undefined,
+    roles: user.usuarioRoles.map((ur) => ur.rol.codigo),
   },
 };
 }
