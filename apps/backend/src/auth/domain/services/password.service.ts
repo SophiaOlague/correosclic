@@ -1,18 +1,8 @@
-import { Injectable } from '@nestjs/common';
-import * as bcrypt from 'bcrypt';
+export abstract class PasswordService {
+  abstract hash(password: string): Promise<string>;
 
-@Injectable()
-export class PasswordService {
-  private readonly saltRounds = 12;
-
-  async hash(password: string): Promise<string> {
-    return bcrypt.hash(password, this.saltRounds);
-  }
-
-  async compare(
+  abstract compare(
     password: string,
     passwordHash: string,
-  ): Promise<boolean> {
-    return bcrypt.compare(password, passwordHash);
-  }
+  ): Promise<boolean>;
 }

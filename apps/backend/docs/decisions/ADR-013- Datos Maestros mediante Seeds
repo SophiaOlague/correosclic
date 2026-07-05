@@ -1,0 +1,26 @@
+Contexto
+
+CorreosClic depende de información base que debe existir antes de ejecutar cualquier caso de uso, por ejemplo:
+
+Roles
+Permisos
+Regiones
+Estados
+Configuración inicial
+
+La ausencia de estos datos representa un error de instalación del sistema, no un error de negocio.
+
+Decisión
+
+Los datos maestros se poblarán mediante Seeds modulares e idempotentes, utilizando upsert().
+
+Cada catálogo tendrá su propio archivo *.seed.ts y un orquestador central (seed.ts) será responsable de ejecutarlos.
+
+Consecuencias
+
+Ventajas
+
+Instalación reproducible.
+Sin registros duplicados.
+Fácil mantenimiento.
+Escalable conforme crezcan los catálogos.

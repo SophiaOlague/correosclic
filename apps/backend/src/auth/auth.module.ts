@@ -6,6 +6,11 @@ import { AuthController } from './controllers/auth.controller';
 import { AuthService } from './application/auth.service';
 
 import { PasswordService } from './domain/services/password.service';
+import { BcryptPasswordService } from './domain/services/bcrypt-password.service';
+import { UserRepository } from './infrastructure/repositories/user.repository';
+
+import { JwtTokenService } from './domain/services/jwt-token.service';
+import { TokenService } from './domain/services/token.service';
 
 @Module({
   imports: [
@@ -22,7 +27,18 @@ import { PasswordService } from './domain/services/password.service';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, PasswordService],
+  providers: [
+  AuthService,
+  UserRepository,
+  {
+    provide: PasswordService,
+    useClass: BcryptPasswordService,
+  },
+  {
+    provide: TokenService,
+    useClass: JwtTokenService,
+}
+],
   exports: [AuthService],
 })
 export class AuthModule {}
