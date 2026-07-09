@@ -245,6 +245,8 @@ pesoKg Decimal @db.Decimal(10,3)
 
 activo Boolean @default(true)
 
+publicado Boolean @default(false)
+
 createdAt DateTime @default(now())
 
 updatedAt DateTime @updatedAt
@@ -262,6 +264,8 @@ variantes ProductoVariante[]
 @@index([categoriaId])
 
 @@index([activo])
+
+@@index([publicado])
 
 @@map("productos")
 }
@@ -331,8 +335,6 @@ sku String @unique @db.VarChar(100)
 
 precio Decimal @db.Decimal(12,2)
 
-stock Int @default(0)
-
 pesoKg Decimal? @db.Decimal(10,3)
 
 activa Boolean @default(true)
@@ -342,6 +344,8 @@ createdAt DateTime @default(now())
 updatedAt DateTime @updatedAt
 
 producto Producto @relation(fields: [productoId], references: [id])
+
+inventario Inventario?
 
 valores ProductoVarianteValor[]
 
@@ -354,6 +358,30 @@ pedidoItems PedidoItem[]
 @@index([activa])
 
 @@map("productos_variantes")
+}
+
+model Inventario {
+
+  id String @id @default(uuid()) @db.Uuid
+
+  productoVarianteId String @unique @db.Uuid
+
+  stockDisponible Int @default(0)
+
+  stockReservado Int @default(0)
+
+  stockMinimo Int @default(0)
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  productoVariante ProductoVariante
+    @relation(fields: [productoVarianteId], references: [id])
+
+  @@index([stockDisponible])
+
+  @@map("inventarios")
 }
 
 model ProductoVarianteValor {
