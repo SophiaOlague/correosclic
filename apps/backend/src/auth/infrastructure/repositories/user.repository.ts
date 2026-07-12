@@ -58,6 +58,12 @@ export class UserRepository {
   },
 });
 
+    await tx.cliente.create({
+  data: {
+        usuarioId: user.id,
+  },
+});
+
     return user;
   });
 }

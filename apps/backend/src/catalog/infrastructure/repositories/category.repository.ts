@@ -35,4 +35,14 @@ async findBySlug(
     },
   });
 }
+
+async findById(
+  id: string,
+) {
+  return this.prisma.categoria.findUnique({
+    where: {
+      id,
+    },
+  });
+}
 }

@@ -8,6 +8,7 @@ import { InventoryService } from './application/services/inventory.service';
 import { CategoryRepository } from './infrastructure/repositories/category.repository';
 
 import { CategoryController } from './controllers/category.controller';
+import { ProductRepository } from './infrastructure/repositories/product.repository';
 
 
 @Module({
@@ -20,6 +21,7 @@ import { CategoryController } from './controllers/category.controller';
     VariantService,
     InventoryService,
     CategoryRepository,
+    ProductRepository,
   ],
   exports: [
     CategoryService,

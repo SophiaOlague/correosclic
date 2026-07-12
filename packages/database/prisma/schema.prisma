@@ -528,6 +528,20 @@ enum EstadoSolicitudVendedor {
   RECHAZADA
 }
 
+enum PasoSolicitudVendedor {
+  SOLICITUD
+  INFORMACION_FISCAL
+  DOCUMENTOS
+  REVISION
+  FINALIZADA
+}
+
+enum TipoDocumentoVendedor {
+  INE
+  CONSTANCIA_SITUACION_FISCAL
+  COMPROBANTE_DOMICILIO
+}
+
 model Cliente {
   id String @id @default(uuid()) @db.Uuid
 
@@ -580,6 +594,8 @@ model SolicitudVendedor {
 
   estado EstadoSolicitudVendedor @default(PENDIENTE)
 
+  pasoActual PasoSolicitudVendedor @default(SOLICITUD)
+
   comentariosRevision String?
 
   fechaRevision DateTime?
@@ -606,7 +622,7 @@ model DocumentoVendedor {
 
   solicitudVendedorId String @db.Uuid
 
-  tipoDocumento String @db.VarChar(50)
+  tipoDocumento TipoDocumentoVendedor
 
   nombreArchivo String @db.VarChar(255)
 
