@@ -4,6 +4,7 @@ import {
   Param,
   Post,
   UseGuards,
+  Patch
 } from '@nestjs/common';
 
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
@@ -53,6 +54,16 @@ addDocument(
   return this.sellerOnboardingService.addDocument(
     requestId,
     dto,
+  );
+}
+//UC-SELLER-004 Enviar a revisión
+@UseGuards(JwtAuthGuard)
+@Patch('requests/:id/submit')
+submitRequest(
+  @Param('id') requestId: string,
+) {
+  return this.sellerOnboardingService.submitRequest(
+    requestId,
   );
 }
 }

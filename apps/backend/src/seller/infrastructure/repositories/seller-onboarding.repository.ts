@@ -151,4 +151,16 @@ export class SellerOnboardingRepository {
       });
     });
   }
+  async submitRequest(
+  requestId: string,
+) {
+  return this.prisma.solicitudVendedor.update({
+    where: {
+      id: requestId,
+    },
+    data: {
+      pasoActual: 'REVISION',
+    },
+  });
+}
 }

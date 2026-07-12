@@ -8,7 +8,9 @@ import { FiscalInformationAlreadyExistsException } from '../../infrastructure/re
 import { CreateFiscalInformationDto } from '../dto/create-fiscal-information.dto';
 import { DocumentAlreadyExistsException } from '../../domain/exceptions/document-already-exists.exception';
 import { UploadSellerDocumentDto } from '../dto/upload-seller-document.dto';
-
+import { IncompleteSellerRequestException } from 'src/seller/domain/exceptions/incomplete-seller-request.exception';
+import { TipoDocumentoVendedor } from '@correosclic/database';
+import { ConflictException } from '@nestjs/common/exceptions/conflict.exception';
 
 @Injectable()
 export class SellerOnboardingService {
@@ -84,6 +86,59 @@ async addDocument(
   return this.repository.addDocument(
     requestId,
     dto,
+  );
+}
+//validar documentos y enviar solicitud a revisión
+async submitRequest(
+  requestId: string,
+) {
+
+  const request =
+    await this.repository.findRequestById(requestId);
+
+  if (!request) {
+    throw new SellerRequestNotFoundException();
+  }
+
+  if (!request.informacionFiscal) {
+    throw new ConflictException(
+      'Debe registrar la información fiscal antes de enviar la solicitud.',
+    );
+  }
+
+  const requiredDocuments = [
+    {
+      tipo: TipoDocumentoVendedor.INE,
+      nombre: 'INE',
+    },
+    {
+      tipo: TipoDocumentoVendedor.CONSTANCIA_SITUACION_FISCAL,
+      nombre: 'Constancia de Situación Fiscal',
+    },
+    {
+      tipo: TipoDocumentoVendedor.COMPROBANTE_DOMICILIO,
+      nombre: 'Comprobante de domicilio',
+    },
+  ];
+
+  const uploadedDocuments = new Set(
+    request.documentos.map(
+      document => document.tipoDocumento,
+    ),
+  );
+
+  const missingDocument = requiredDocuments.find(
+    document => !uploadedDocuments.has(document.tipo),
+  );
+
+  if (missingDocument) {
+    throw new ConflictException(
+      `Falta subir el documento: ${missingDocument.nombre}.`,
+    );
+  }
+
+  return this.repository.submitRequest(
+    requestId,
   );
 }
 }
