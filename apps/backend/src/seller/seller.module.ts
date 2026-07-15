@@ -6,6 +6,7 @@ import { SellerOnboardingController } from './controllers/seller-onboarding.cont
 import { SellerOnboardingService } from './application/services/seller-onboarding.service';
 import { SellerOnboardingRepository } from './infrastructure/repositories/seller-onboarding.repository';
 
+
 @Module({
   imports: [
     PrismaModule,

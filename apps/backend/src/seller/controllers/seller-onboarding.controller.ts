@@ -16,6 +16,7 @@ import { SellerOnboardingService } from '../application/services/seller-onboardi
 import { CreateFiscalInformationDto } from '../application/dto/create-fiscal-information.dto';
 
 import { UploadSellerDocumentDto } from '../application/dto/upload-seller-document.dto';
+import { CreateStoreDto } from '../application/dto/create-store.dto';
 
 @Controller('seller')
 export class SellerOnboardingController {
@@ -64,6 +65,21 @@ submitRequest(
 ) {
   return this.sellerOnboardingService.submitRequest(
     requestId,
+  );
+}
+//UC-SELLER-007 — Crear Tienda
+@UseGuards(JwtAuthGuard)
+@Post('store')
+createStore(
+  @CurrentUser()
+  user: AuthenticatedUserDto,
+
+  @Body()
+  dto: CreateStoreDto,
+) {
+  return this.sellerOnboardingService.createStore(
+    user.id,
+    dto,
   );
 }
 }

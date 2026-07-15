@@ -4,13 +4,16 @@ import { SellerOnboardingRepository } from '../../infrastructure/repositories/se
 
 import { PendingSellerRequestException } from '../../domain/exceptions/pending-seller-request.exception';
 import { SellerRequestNotFoundException } from '../../domain/exceptions/seller-request-not-found.exception';
-import { FiscalInformationAlreadyExistsException } from '../../infrastructure/repositories/fiscal-information-already-exists.exception';
+import { FiscalInformationAlreadyExistsException } from '../../domain/exceptions/fiscal-information-already-exists.exception';
 import { CreateFiscalInformationDto } from '../dto/create-fiscal-information.dto';
 import { DocumentAlreadyExistsException } from '../../domain/exceptions/document-already-exists.exception';
 import { UploadSellerDocumentDto } from '../dto/upload-seller-document.dto';
 import { IncompleteSellerRequestException } from 'src/seller/domain/exceptions/incomplete-seller-request.exception';
 import { TipoDocumentoVendedor } from '@correosclic/database';
 import { ConflictException } from '@nestjs/common/exceptions/conflict.exception';
+import { StoreAlreadyExistsException } from 'src/seller/domain/exceptions/store-already-exists.exception';
+import { CreateStoreDto } from '../dto/create-store.dto';
+import { SellerNotFoundException } from 'src/seller/domain/exceptions/seller-not-found.exception';
 
 @Injectable()
 export class SellerOnboardingService {
@@ -141,4 +144,43 @@ async submitRequest(
     requestId,
   );
 }
+//crear tienda
+async createStore(
+  userId: string,
+  dto: CreateStoreDto,
+) {
+
+  const seller =
+    await this.repository.findSellerByUserId(userId);
+
+  if (!seller) {
+    throw new SellerNotFoundException();
+  }
+
+  const store =
+    await this.repository.findStoreBySellerId(
+      seller.id,
+    );
+
+  if (store) {
+    throw new StoreAlreadyExistsException();
+  }
+
+  return this.repository.createStore(
+    seller.id,
+    {
+      codigoPublico: this.generateStoreCode(),
+      nombre: dto.nombre,
+      descripcion: dto.descripcion,
+    },
+  );
+}
+  private generateStoreCode(): string {
+
+    const random = Math.floor(
+      100000 + Math.random() * 900000,
+    );
+
+    return `CCS-${random}`;
+  }
 }

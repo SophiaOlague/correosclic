@@ -1,4 +1,5 @@
 export class ProductResponseDto {
+
   readonly id: string;
 
   readonly codigoPublico: string;
@@ -7,9 +8,12 @@ export class ProductResponseDto {
 
   readonly descripcion?: string;
 
+  readonly pesoKg: number;
+
   readonly activo: boolean;
 
   readonly publicado: boolean;
 
   readonly createdAt: Date;
+
 }

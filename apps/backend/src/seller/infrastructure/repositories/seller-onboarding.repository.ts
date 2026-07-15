@@ -163,4 +163,50 @@ export class SellerOnboardingRepository {
     },
   });
 }
+//Buscar vendedor por usuario
+async findSellerByUserId(
+  userId: string,
+) {
+  return this.prisma.vendedor.findUnique({
+    where: {
+      usuarioId: userId,
+    },
+  });
+}
+//Buscar tienda
+async findStoreBySellerId(
+  vendedorId: string,
+) {
+  return this.prisma.tienda.findUnique({
+    where: {
+      vendedorId,
+    },
+  });
+}
+//Crear tienda
+async createStore(
+  vendedorId: string,
+  data: {
+    codigoPublico: string;
+    nombre: string;
+    descripcion?: string;
+  },
+) {
+  return this.prisma.tienda.create({
+    data: {
+      vendedorId,
+      codigoPublico: data.codigoPublico,
+      nombre: data.nombre,
+      descripcion: data.descripcion,
+    },
+  });
+}
+private generateStoreCode(): string {
+
+  const random = Math.floor(
+    100000 + Math.random() * 900000,
+  );
+
+  return `CCS-${random}`;
+}
 }

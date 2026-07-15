@@ -1,28 +1,20 @@
 import {
   IsNotEmpty,
-  IsNumber,
+  IsOptional,
   IsString,
-  IsUUID,
   MaxLength,
-  Min,
 } from 'class-validator';
 
-export class CreateProductDto {
-
-  @IsUUID()
-  readonly categoriaId: string;
+export class CreateStoreDto {
 
   @IsString()
   @IsNotEmpty()
   @MaxLength(255)
   readonly nombre: string;
 
+  @IsOptional()
   @IsString()
-  @MaxLength(5000)
+  @MaxLength(1000)
   readonly descripcion?: string;
-
-  @IsNumber()
-  @Min(0.001)
-  readonly pesoKg: number;
 
 }

@@ -9,12 +9,14 @@ import { CategoryRepository } from './infrastructure/repositories/category.repos
 
 import { CategoryController } from './controllers/category.controller';
 import { ProductRepository } from './infrastructure/repositories/product.repository';
-
+import { ProductController } from './controllers/product.controller';
+import { SellerRepository } from './infrastructure/repositories/seller.repository';
+import { VariantRepository } from './infrastructure/repositories/variant.repository';
 
 @Module({
   imports: [PrismaModule],
-  controllers: [CategoryController
-  ],
+  controllers: [CategoryController, ProductController],
+  
   providers: [
     CategoryService,
     ProductService,
@@ -22,6 +24,8 @@ import { ProductRepository } from './infrastructure/repositories/product.reposit
     InventoryService,
     CategoryRepository,
     ProductRepository,
+    SellerRepository,
+    VariantRepository,
   ],
   exports: [
     CategoryService,
