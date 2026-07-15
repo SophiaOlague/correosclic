@@ -4,13 +4,8 @@ import {
   IsNumber,
   IsOptional,
   IsString,
-  ValidateNested,
+  IsUUID,
 } from 'class-validator';
-
-import { Type } from 'class-transformer';
-
-import { CreateProductVariantAttributeDto }
-from './create-product-variant-attribute.dto';
 
 export class CreateProductVariantDto {
 
@@ -26,10 +21,9 @@ export class CreateProductVariantDto {
 
   @IsArray()
   @ArrayMinSize(1)
-  @ValidateNested({
+  @IsUUID('4', {
     each: true,
   })
-  @Type(() => CreateProductVariantAttributeDto)
-  readonly atributos: CreateProductVariantAttributeDto[];
+  readonly valorAtributoIds: string[];
 
 }

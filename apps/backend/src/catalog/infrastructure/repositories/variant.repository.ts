@@ -16,6 +16,13 @@ export class VariantRepository {
       where: {
         id: productId,
       },
+      include: {
+        tienda: {
+          include: {
+            vendedor: true,
+          },
+        },
+      },
     });
   }
 
@@ -29,4 +36,55 @@ export class VariantRepository {
     });
   }
 
+  async findAttributeValuesByIds(
+    ids: string[],
+  ) {
+    return this.prisma.valorAtributo.findMany({
+      where: {
+        id: {
+          in: ids,
+        },
+      },
+    });
+  }
+
+async createVariantWithValues(
+  data: {
+    productoId: string;
+    sku: string;
+    precio: number;
+    pesoKg?: number;
+    valorAtributoIds: string[];
+  },
+) {
+
+  return this.prisma.$transaction(async (tx) => {
+
+    const variant =
+      await tx.productoVariante.create({
+        data: {
+          productoId: data.productoId,
+          sku: data.sku,
+          precio: data.precio,
+          pesoKg: data.pesoKg,
+        },
+      });
+
+      const relations =
+        data.valorAtributoIds.map(
+          valorAtributoId => ({
+            productoVarianteId: variant.id,
+            valorAtributoId,
+          }),
+        );
+
+      await tx.productoVarianteValor.createMany({
+        data: relations,
+      });
+
+    return variant;
+
+  });
+
+}
 }
