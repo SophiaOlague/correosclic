@@ -4,6 +4,7 @@ import {
   Post,
   UseGuards,
   Param,
+  Patch
 } from '@nestjs/common';
 
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
@@ -18,6 +19,11 @@ import { CreateProductVariantDto } from '../application/dto/create-product-varia
 
 import { InventoryService } from '../application/services/inventory.service';
 import { CreateInventoryDto } from '../application/dto/create-inventory.dto';
+
+import { UpdateInventoryDto } from '../application/dto/update-inventory.dto';
+import { ReserveInventoryDto } from '../application/dto/reserve-inventory.dto';
+import { ReleaseInventoryDto } from '../application/dto/release-inventory.dto';
+import { ConfirmInventoryDto } from '../application/dto/confirm-inventory.dto';
 
 @Controller('seller/products')
 @UseGuards(JwtAuthGuard)
@@ -78,6 +84,78 @@ createInventory(
 ) {
 
   return this.inventoryService.create(
+    variantId,
+    dto,
+  );
+
+}
+//actualizar inventario endpoint
+@Patch('variants/:id/inventory')
+updateInventory(
+
+  @Param('id')
+  variantId: string,
+
+  @Body()
+  dto: UpdateInventoryDto,
+
+) {
+
+  return this.inventoryService.update(
+    variantId,
+    dto,
+  );
+
+}
+//reserve inventory endpoint
+@Post('variants/:id/inventory/reserve')
+reserveInventory(
+
+  @Param('id')
+  variantId: string,
+
+  @Body()
+  dto: ReserveInventoryDto,
+
+) {
+
+  return this.inventoryService.reserve(
+    variantId,
+    dto,
+  );
+
+}
+//release inventory endpoint
+@Post('variants/:id/inventory/release')
+releaseInventory(
+
+  @Param('id')
+  variantId: string,
+
+  @Body()
+  dto: ReleaseInventoryDto,
+
+) {
+
+  return this.inventoryService.release(
+    variantId,
+    dto,
+  );
+
+}
+//confirm inventory endpoint
+@Post('variants/:id/inventory/confirm')
+confirmInventory(
+
+  @Param('id')
+  variantId: string,
+
+  @Body()
+  dto: ConfirmInventoryDto,
+
+) {
+
+  return this.inventoryService.confirm(
     variantId,
     dto,
   );

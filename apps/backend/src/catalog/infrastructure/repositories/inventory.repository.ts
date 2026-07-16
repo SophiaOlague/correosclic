@@ -44,5 +44,99 @@ export class InventoryRepository {
       },
     });
   }
+//Actualizar inventario
+async update(
+  inventoryId: string,
+  data: {
+    stockDisponible: number;
+    stockMinimo: number;
+  },
+) {
+  return this.prisma.inventario.update({
+    where: {
+      id: inventoryId,
+    },
+    data: {
+      stockDisponible: data.stockDisponible,
+      stockMinimo: data.stockMinimo,
+    },
+  });
+}
+//reserve inventory
+async reserve(
+  inventoryId: string,
+  quantity: number,
+) {
 
+  return this.prisma.inventario.update({
+
+    where: {
+      id: inventoryId,
+    },
+
+    data: {
+
+      stockDisponible: {
+        decrement: quantity,
+      },
+
+      stockReservado: {
+        increment: quantity,
+      },
+
+    },
+
+  });
+
+}
+//release inventory
+async release(
+  inventoryId: string,
+  quantity: number,
+) {
+
+  return this.prisma.inventario.update({
+
+    where: {
+      id: inventoryId,
+    },
+
+    data: {
+
+      stockDisponible: {
+        increment: quantity,
+      },
+
+      stockReservado: {
+        decrement: quantity,
+      },
+
+    },
+
+  });
+
+}
+//confirm shipping
+async confirm(
+  inventoryId: string,
+  quantity: number,
+) {
+
+  return this.prisma.inventario.update({
+
+    where: {
+      id: inventoryId,
+    },
+
+    data: {
+
+      stockReservado: {
+        decrement: quantity,
+      },
+
+    },
+
+  });
+
+}
 }
