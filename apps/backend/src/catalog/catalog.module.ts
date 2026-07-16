@@ -12,6 +12,8 @@ import { ProductRepository } from './infrastructure/repositories/product.reposit
 import { ProductController } from './controllers/product.controller';
 import { SellerRepository } from './infrastructure/repositories/seller.repository';
 import { VariantRepository } from './infrastructure/repositories/variant.repository';
+import { InventoryRepository } from './infrastructure/repositories/inventory.repository';
+
 
 @Module({
   imports: [PrismaModule],
@@ -26,6 +28,7 @@ import { VariantRepository } from './infrastructure/repositories/variant.reposit
     ProductRepository,
     SellerRepository,
     VariantRepository,
+    InventoryRepository,
   ],
   exports: [
     CategoryService,
