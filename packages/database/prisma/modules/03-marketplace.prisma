@@ -286,24 +286,24 @@ variantes ProductoVariante[]
 }
 
 model ProductoImagen {
+  id String @id @default(uuid()) @db.Uuid
 
-id String @id @default(uuid()) @db.Uuid
+  productoId String @db.Uuid
 
-productoId String @db.Uuid
+  storageKey String
 
-url String
+  url String
 
-orden Int @default(1)
+  orden Int
 
-esPrincipal Boolean @default(false)
+  esPrincipal Boolean @default(false)
 
-createdAt DateTime @default(now())
+  createdAt DateTime @default(now())
 
-producto Producto @relation(fields: [productoId], references: [id])
+  producto Producto @relation(fields: [productoId], references: [id])
 
-@@index([productoId])
-
-@@map("productos_imagenes")
+  @@index([productoId])
+  @@map("productos_imagenes")
 }
 
 model Atributo {

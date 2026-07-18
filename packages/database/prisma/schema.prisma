@@ -786,9 +786,11 @@ model ProductoImagen {
 
   productoId String @db.Uuid
 
+  storageKey String
+
   url String
 
-  orden Int @default(1)
+  orden Int
 
   esPrincipal Boolean @default(false)
 

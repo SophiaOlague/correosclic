@@ -4,7 +4,13 @@ import {
   Post,
   UseGuards,
   Param,
-  Patch
+  Patch,
+  UploadedFile,
+  UseInterceptors,
+  BadRequestException,
+  ParseFilePipe,
+  FileTypeValidator,
+  MaxFileSizeValidator,
 } from '@nestjs/common';
 
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
@@ -24,6 +30,11 @@ import { UpdateInventoryDto } from '../application/dto/update-inventory.dto';
 import { ReserveInventoryDto } from '../application/dto/reserve-inventory.dto';
 import { ReleaseInventoryDto } from '../application/dto/release-inventory.dto';
 import { ConfirmInventoryDto } from '../application/dto/confirm-inventory.dto';
+import { ProductImageService } from '../product-image/services/product-image.service';
+
+import { FileInterceptor } from '@nestjs/platform-express';
+import 'multer';
+
 
 @Controller('seller/products')
 @UseGuards(JwtAuthGuard)
@@ -33,6 +44,7 @@ export class ProductController {
     private readonly productService: ProductService,
     private readonly variantService: VariantService,
     private readonly inventoryService: InventoryService,
+    private readonly productImageService: ProductImageService,
   ) {}
 
   
@@ -158,6 +170,63 @@ confirmInventory(
   return this.inventoryService.confirm(
     variantId,
     dto,
+  );
+
+}
+//upload product image endpoint
+@Post(':productId/images')
+@UseInterceptors(FileInterceptor('file'))
+async uploadProductImage(
+
+  @CurrentUser()
+  user: AuthenticatedUserDto,
+
+  @Param('productId')
+  productId: string,
+
+  @UploadedFile(
+
+  new ParseFilePipe({
+
+    validators: [
+
+      new MaxFileSizeValidator({
+
+        maxSize: 5 * 1024 * 1024,
+
+      }),
+
+      new FileTypeValidator({
+
+        fileType: /^image\/(jpeg|png|webp)$/,
+
+      }),
+
+    ],
+
+    fileIsRequired: true,
+
+  }),
+
+)
+
+file: Express.Multer.File,
+
+) {
+
+
+  return this.productImageService.uploadProductImage(
+
+    user.id,
+
+    productId,
+
+    {
+      buffer: file.buffer,
+      originalName: file.originalname,
+      mimeType: file.mimetype,
+    },
+
   );
 
 }
