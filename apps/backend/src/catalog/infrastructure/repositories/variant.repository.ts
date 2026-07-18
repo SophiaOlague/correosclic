@@ -1,0 +1,90 @@
+import { Injectable } from '@nestjs/common';
+
+import { PrismaService } from '../../../prisma/prisma.service';
+
+@Injectable()
+export class VariantRepository {
+
+  constructor(
+    private readonly prisma: PrismaService,
+  ) {}
+
+  async findProductById(
+    productId: string,
+  ) {
+    return this.prisma.producto.findUnique({
+      where: {
+        id: productId,
+      },
+      include: {
+        tienda: {
+          include: {
+            vendedor: true,
+          },
+        },
+      },
+    });
+  }
+
+  async findVariantBySku(
+    sku: string,
+  ) {
+    return this.prisma.productoVariante.findUnique({
+      where: {
+        sku,
+      },
+    });
+  }
+
+  async findAttributeValuesByIds(
+    ids: string[],
+  ) {
+    return this.prisma.valorAtributo.findMany({
+      where: {
+        id: {
+          in: ids,
+        },
+      },
+    });
+  }
+
+async createVariantWithValues(
+  data: {
+    productoId: string;
+    sku: string;
+    precio: number;
+    pesoKg?: number;
+    valorAtributoIds: string[];
+  },
+) {
+
+  return this.prisma.$transaction(async (tx) => {
+
+    const variant =
+      await tx.productoVariante.create({
+        data: {
+          productoId: data.productoId,
+          sku: data.sku,
+          precio: data.precio,
+          pesoKg: data.pesoKg,
+        },
+      });
+
+      const relations =
+        data.valorAtributoIds.map(
+          valorAtributoId => ({
+            productoVarianteId: variant.id,
+            valorAtributoId,
+          }),
+        );
+
+      await tx.productoVarianteValor.createMany({
+        data: relations,
+      });
+
+    return variant;
+
+  });
+
+}
+}

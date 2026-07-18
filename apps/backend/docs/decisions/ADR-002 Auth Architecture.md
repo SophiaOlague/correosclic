@@ -1,0 +1,1 @@
+Auth adopta una arquitectura con un AuthService orquestador y servicios especializados (PasswordService, TokenService, SessionService).

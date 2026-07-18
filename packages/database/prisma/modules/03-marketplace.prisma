@@ -9,6 +9,19 @@ APROBADA
 RECHAZADA
 }
 
+enum PasoSolicitudVendedor {
+  SOLICITUD
+  INFORMACION_FISCAL
+  DOCUMENTOS
+  REVISION
+  FINALIZADA
+}
+
+enum TipoDocumentoVendedor {
+  INE
+  CONSTANCIA_SITUACION_FISCAL
+  COMPROBANTE_DOMICILIO
+}
 model Cliente {
 
 id String @id @default(uuid()) @db.Uuid
@@ -67,6 +80,8 @@ clienteId String @db.Uuid
 
 estado EstadoSolicitudVendedor @default(PENDIENTE)
 
+pasoActual PasoSolicitudVendedor @default(SOLICITUD)
+
 comentariosRevision String?
 
 fechaRevision DateTime?
@@ -96,7 +111,7 @@ id String @id @default(uuid()) @db.Uuid
 
 solicitudVendedorId String @db.Uuid
 
-tipoDocumento String @db.VarChar(50)
+tipoDocumento TipoDocumentoVendedor
 
 nombreArchivo String @db.VarChar(255)
 
@@ -245,6 +260,8 @@ pesoKg Decimal @db.Decimal(10,3)
 
 activo Boolean @default(true)
 
+publicado Boolean @default(false)
+
 createdAt DateTime @default(now())
 
 updatedAt DateTime @updatedAt
@@ -263,28 +280,30 @@ variantes ProductoVariante[]
 
 @@index([activo])
 
+@@index([publicado])
+
 @@map("productos")
 }
 
 model ProductoImagen {
+  id String @id @default(uuid()) @db.Uuid
 
-id String @id @default(uuid()) @db.Uuid
+  productoId String @db.Uuid
 
-productoId String @db.Uuid
+  storageKey String
 
-url String
+  url String
 
-orden Int @default(1)
+  orden Int
 
-esPrincipal Boolean @default(false)
+  esPrincipal Boolean @default(false)
 
-createdAt DateTime @default(now())
+  createdAt DateTime @default(now())
 
-producto Producto @relation(fields: [productoId], references: [id])
+  producto Producto @relation(fields: [productoId], references: [id])
 
-@@index([productoId])
-
-@@map("productos_imagenes")
+  @@index([productoId])
+  @@map("productos_imagenes")
 }
 
 model Atributo {
@@ -331,8 +350,6 @@ sku String @unique @db.VarChar(100)
 
 precio Decimal @db.Decimal(12,2)
 
-stock Int @default(0)
-
 pesoKg Decimal? @db.Decimal(10,3)
 
 activa Boolean @default(true)
@@ -342,6 +359,8 @@ createdAt DateTime @default(now())
 updatedAt DateTime @updatedAt
 
 producto Producto @relation(fields: [productoId], references: [id])
+
+inventario Inventario?
 
 valores ProductoVarianteValor[]
 
@@ -354,6 +373,30 @@ pedidoItems PedidoItem[]
 @@index([activa])
 
 @@map("productos_variantes")
+}
+
+model Inventario {
+
+  id String @id @default(uuid()) @db.Uuid
+
+  productoVarianteId String @unique @db.Uuid
+
+  stockDisponible Int @default(0)
+
+  stockReservado Int @default(0)
+
+  stockMinimo Int @default(0)
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  productoVariante ProductoVariante
+    @relation(fields: [productoVarianteId], references: [id])
+
+  @@index([stockDisponible])
+
+  @@map("inventarios")
 }
 
 model ProductoVarianteValor {
