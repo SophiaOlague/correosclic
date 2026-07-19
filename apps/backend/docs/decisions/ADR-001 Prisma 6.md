@@ -1,0 +1,1 @@
+Se selecciona Prisma 6.19.3 en lugar de Prisma 7 por problemas de compatibilidad y mayor estabilidad.

@@ -1,0 +1,1 @@
+CorreosClic busca convertirse en una plataforma logística y marketplace inspirada en Correos de México, ofreciendo una solución integral para vendedores, clientes y administradores mediante una arquitectura modular, escalable y mantenible.
