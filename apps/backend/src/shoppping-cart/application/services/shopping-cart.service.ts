@@ -7,18 +7,18 @@ import { ShoppingCartRepository } from '../../infrastructure/repositories/shoppi
 import { VariantRepository } from '../../../catalog/infrastructure/repositories/variant.repository';
 
 import { AddShoppingCartItemDto } from '../dto/add-shopping-cart-item.dto';
+import { UpdateShoppingCartItemDto } from '../dto/update-shopping-cart-item.dto';
 
 import { InvalidQuantityException } from '../../domain/exceptions/invalid-quantity.exception';
 import { InsufficientStockException } from '../../domain/exceptions/insufficient-stock.exception';
+import { CustomerNotFoundException } from '../../domain/exceptions/customer-not-found.exception';
 
 import { VariantNotFoundException } from '../../../catalog/domain/exceptions/variant-not-found.exception';
+
 import { UserRepository } from '../../../auth/infrastructure/repositories/user.repository';
-import { NotFoundException, ForbiddenException } from '@nestjs/common';
-import { UpdateShoppingCartItemDto } from '../dto/update-shopping-cart-item.dto';
-import { CartItemAccessDeniedException } from '../dto/cart-item-access-denied.exception';
-import { CartItemNotFoundException } from '../dto/cart-item-not-found.exception';
 
-
+import { CartItemAccessDeniedException } from '../../domain/exceptions/cart-item-access-denied.exception';
+import { CartItemNotFoundException } from '../../domain/exceptions/cart-item-not-found.exception';
 
 @Injectable()
 export class ShoppingCartService {
@@ -29,293 +29,240 @@ export class ShoppingCartService {
     private readonly userRepository: UserRepository,
   ) {}
 
-async getCart(
-  userId: string,
-): Promise<ShoppingCartDto> {
-
-  const client =
-    await this.userRepository.findClientByUserId(
-      userId,
-    );
-
-  if (!client) {
-    throw new NotFoundException(
-      'El cliente no existe.',
-    );
-  }
-
-  const cart =
-    await this.shoppingCartRepository.findCompleteCartByCustomerId(
-      client.id,
-    );
-
-  return this.shoppingCartMapper.toDto(cart);
-}
- async addItem(
-  userId: string,
-  dto: AddShoppingCartItemDto,
-): Promise<ShoppingCartDto> {
-
+  async getCart(
+    userId: string,
+  ): Promise<ShoppingCartDto> {
     const client =
-  await this.userRepository.findClientByUserId(
-    userId,
-  );
+      await this.getClientByUserId(userId);
 
-if (!client) {
-  throw new NotFoundException(
-    'El cliente no existe.',
-  );
-}
+    const cart =
+      await this.shoppingCartRepository.findCompleteCartByCustomerId(
+        client.id,
+      );
 
-  if (dto.cantidad <= 0) {
-  throw new InvalidQuantityException();
-}
-
-const variant =
-  await this.variantRepository.findCompleteById(
-    dto.productoVarianteId,
-  );
-
-if (!variant) {
-  throw new VariantNotFoundException();
-}
-
-if (!variant.activa) {
-  throw new VariantNotFoundException();
-}
-
-if (
-  !variant.producto.activo ||
-  !variant.producto.publicado
-) {
-  throw new VariantNotFoundException();
-}
-
-if (!variant.inventario) {
-  throw new InsufficientStockException(0);
-}
-
-if (
-  variant.inventario.stockDisponible <
-  dto.cantidad
-) {
-  throw new InsufficientStockException(
-    variant.inventario.stockDisponible,
-  );
-}
-
-let cart =
-  await this.shoppingCartRepository.findByCustomerId(
-    client.id,
-  );
-
-if (!cart) {
-  cart =
-    await this.shoppingCartRepository.createCart(
-      client.id,
-    );
-}
-
-const item =
-  await this.shoppingCartRepository.findItem(
-    cart.id,
-    dto.productoVarianteId,
-  );
-//El producto ya esta en el carrito, entonces actualizamos la cantidad
-if (item) {
-
-  const nuevaCantidad =
-    item.cantidad + dto.cantidad;
-
-  if (
-    nuevaCantidad >
-    variant.inventario.stockDisponible
-  ) {
-    throw new InsufficientStockException(
-      variant.inventario.stockDisponible,
-    );
+    return this.shoppingCartMapper.toDto(cart);
   }
 
-  await this.shoppingCartRepository.updateItemQuantity(
-    item.id,
-    nuevaCantidad,
-  );
+  async addItem(
+    userId: string,
+    dto: AddShoppingCartItemDto,
+  ): Promise<ShoppingCartDto> {
+    const client =
+      await this.getClientByUserId(userId);
 
-} else {
+    if (dto.cantidad <= 0) {
+      throw new InvalidQuantityException();
+    }
 
-  await this.shoppingCartRepository.createItem({
-
-    carritoId: cart.id,
-
-    productoVarianteId:
+    const variant = await this.getValidVariant(
       dto.productoVarianteId,
-
-    cantidad:
       dto.cantidad,
-
-  });
-
-}
-//Recuperar el carrito actualizado con los items y sus detalles
-const updatedCart =
-  await this.shoppingCartRepository.findCompleteCartByCustomerId(
-    client.id,
-  );
-//finally, return the updated cart
-  return this.shoppingCartMapper.toDto(updatedCart);
-}
-
-async updateItem(
-  userId: string,
-  itemId: string,
-  dto: UpdateShoppingCartItemDto,
-): Promise<ShoppingCartDto> {
-  const client =
-    await this.userRepository.findClientByUserId(
-      userId,
     );
 
-  if (!client) {
-    throw new NotFoundException(
-      'El cliente no existe.',
-    );
+    let cart =
+      await this.shoppingCartRepository.findByCustomerId(
+        client.id,
+      );
+
+    if (!cart) {
+      cart =
+        await this.shoppingCartRepository.createCart(
+          client.id,
+        );
+    }
+
+    const item =
+      await this.shoppingCartRepository.findItem(
+        cart.id,
+        dto.productoVarianteId,
+      );
+
+    if (item) {
+      const nuevaCantidad =
+        item.cantidad + dto.cantidad;
+
+      const inventory = variant.inventario!;
+
+      if (
+        nuevaCantidad >
+        inventory.stockDisponible
+      ) {
+        throw new InsufficientStockException(
+          inventory.stockDisponible,
+        );
+      }
+
+      await this.shoppingCartRepository.updateItemQuantity(
+        item.id,
+        nuevaCantidad,
+      );
+    } else {
+      await this.shoppingCartRepository.createItem({
+        carritoId: cart.id,
+        productoVarianteId:
+          dto.productoVarianteId,
+        cantidad: dto.cantidad,
+      });
+    }
+
+    const updatedCart =
+      await this.shoppingCartRepository.findCompleteCartByCustomerId(
+        client.id,
+      );
+
+    return this.shoppingCartMapper.toDto(updatedCart);
   }
 
-  const item =
-    await this.shoppingCartRepository.findItemById(
-      itemId,
-    );
+  async updateItem(
+    userId: string,
+    itemId: string,
+    dto: UpdateShoppingCartItemDto,
+  ): Promise<ShoppingCartDto> {
+    const client =
+      await this.getClientByUserId(userId);
 
-  if (!item) {
-    throw new CartItemNotFoundException();
-  }
+    const item =
+      await this.shoppingCartRepository.findItemById(
+        itemId,
+      );
 
-  if (item.carrito.clienteId !== client.id) {
-    throw new CartItemAccessDeniedException();
-  }
+    if (!item) {
+      throw new CartItemNotFoundException();
+    }
 
-  // Obtenemos nuevamente la variante para validar su estado actual
-  const variant =
-    await this.variantRepository.findCompleteById(
+    if (item.carrito.clienteId !== client.id) {
+      throw new CartItemAccessDeniedException();
+    }
+
+    await this.getValidVariant(
       item.productoVarianteId,
+      dto.cantidad,
     );
 
-  if (!variant) {
-    throw new VariantNotFoundException();
+    await this.shoppingCartRepository.updateItemQuantity(
+      item.id,
+      dto.cantidad,
+    );
+
+    const cart =
+      await this.shoppingCartRepository.findCompleteCartByCustomerId(
+        client.id,
+      );
+
+    return this.shoppingCartMapper.toDto(cart);
   }
 
-  if (!variant.activa) {
-    throw new VariantNotFoundException();
+  async removeItem(
+    userId: string,
+    itemId: string,
+  ): Promise<ShoppingCartDto> {
+    const client =
+      await this.getClientByUserId(userId);
+
+    const item =
+      await this.shoppingCartRepository.findItemById(
+        itemId,
+      );
+
+    if (!item) {
+      throw new CartItemNotFoundException();
+    }
+
+    if (item.carrito.clienteId !== client.id) {
+      throw new CartItemAccessDeniedException();
+    }
+
+    await this.shoppingCartRepository.deleteItem(
+      item.id,
+    );
+
+    const cart =
+      await this.shoppingCartRepository.findCompleteCartByCustomerId(
+        client.id,
+      );
+
+    return this.shoppingCartMapper.toDto(cart);
   }
 
-  if (
-    !variant.producto.activo ||
-    !variant.producto.publicado
+  async clearCart(
+    userId: string,
+  ): Promise<ShoppingCartDto> {
+    const client =
+      await this.getClientByUserId(userId);
+
+    const cart =
+      await this.shoppingCartRepository.findByCustomerId(
+        client.id,
+      );
+
+    if (!cart) {
+      return this.shoppingCartMapper.toDto(null);
+    }
+
+    await this.shoppingCartRepository.deleteItemsByCartId(
+      cart.id,
+    );
+
+    const updatedCart =
+      await this.shoppingCartRepository.findCompleteCartByCustomerId(
+        client.id,
+      );
+
+    return this.shoppingCartMapper.toDto(updatedCart);
+  }
+
+  private async getClientByUserId(userId: string) {
+    const client =
+      await this.userRepository.findClientByUserId(
+        userId,
+      );
+
+    if (!client) {
+      throw new CustomerNotFoundException();
+    }
+
+    return client;
+  }
+
+  private async getValidVariant(
+    variantId: string,
+    requestedQuantity: number,
   ) {
-    throw new VariantNotFoundException();
+    const variant =
+      await this.variantRepository.findCompleteById(
+        variantId,
+      );
+
+    if (!variant) {
+      throw new VariantNotFoundException();
+    }
+
+    if (!variant.activa) {
+      throw new VariantNotFoundException();
+    }
+
+    if (
+      !variant.producto.activo ||
+      !variant.producto.publicado
+    ) {
+      throw new VariantNotFoundException();
+    }
+
+    const inventory = variant.inventario;
+
+    if (!inventory) {
+      throw new InsufficientStockException(0);
+    }
+
+    if (
+      inventory.stockDisponible <
+      requestedQuantity
+    ) {
+      throw new InsufficientStockException(
+        inventory.stockDisponible,
+      );
+    }
+
+    return variant;
   }
-
-  if (!variant.inventario) {
-    throw new InsufficientStockException(0);
-  }
-
-  if (
-    variant.inventario.stockDisponible <
-    dto.cantidad
-  ) {
-    throw new InsufficientStockException(
-      variant.inventario.stockDisponible,
-    );
-  }
-
-  // Actualizamos la cantidad
-  await this.shoppingCartRepository.updateItemQuantity(
-    item.id,
-    dto.cantidad,
-  );
-
-  // Recargamos el carrito para devolver la información actualizada
-  const cart =
-    await this.shoppingCartRepository.findCompleteCartByCustomerId(
-      client.id,
-    );
-
-  return this.shoppingCartMapper.toDto(cart);
-}
-
-async removeItem(
-  userId: string,
-  itemId: string,
-): Promise<ShoppingCartDto> {
-  const client =
-    await this.userRepository.findClientByUserId(
-      userId,
-    );
-
-  if (!client) {
-    throw new NotFoundException(
-      'El cliente no existe.',
-    );
-  }
-
-  const item =
-    await this.shoppingCartRepository.findItemById(
-      itemId,
-    );
-
-  if (!item) {
-    throw new CartItemNotFoundException();
-  }
-
-  if (item.carrito.clienteId !== client.id) {
-    throw new CartItemAccessDeniedException();
-  }
-
-  await this.shoppingCartRepository.deleteItem(
-    item.id,
-  );
-
-  const cart =
-    await this.shoppingCartRepository.findCompleteCartByCustomerId(
-      client.id,
-    );
-
-  return this.shoppingCartMapper.toDto(cart);
-}
-
-async clearCart(
-  userId: string,
-): Promise<ShoppingCartDto> {
-  const client =
-    await this.userRepository.findClientByUserId(
-      userId,
-    );
-
-  if (!client) {
-    throw new NotFoundException(
-      'El cliente no existe.',
-    );
-  }
-
-  const cart =
-    await this.shoppingCartRepository.findByCustomerId(
-      client.id,
-    );
-
-  if (!cart) {
-    return this.shoppingCartMapper.toDto(null);
-  }
-
-  await this.shoppingCartRepository.deleteItemsByCartId(
-    cart.id,
-  );
-
-  const updatedCart =
-    await this.shoppingCartRepository.findCompleteCartByCustomerId(
-      client.id,
-    );
-
-  return this.shoppingCartMapper.toDto(updatedCart);
-}
-
 }
