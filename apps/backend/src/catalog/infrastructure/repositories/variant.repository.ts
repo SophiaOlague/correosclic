@@ -87,4 +87,45 @@ async createVariantWithValues(
   });
 
 }
+async findById(
+  variantId: string,
+) {
+  return this.prisma.productoVariante.findUnique({
+    where: {
+      id: variantId,
+    },
+  });
+}
+
+async findCompleteById(
+  variantId: string,
+) {
+  return this.prisma.productoVariante.findUnique({
+    where: {
+      id: variantId,
+    },
+    select: {
+      id: true,
+      activa: true,
+      precio: true,
+
+      inventario: {
+        select: {
+          id: true,
+          stockDisponible: true,
+        },
+      },
+
+      producto: {
+        select: {
+          id: true,
+          activo: true,
+          publicado: true,
+        },
+      },
+    },
+  });
+
+
+}
 }

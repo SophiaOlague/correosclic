@@ -9,6 +9,7 @@ import { SellerModule } from './seller/seller.module';
 import { AdminModule } from './admin/admin.module';
 import { CatalogsModule } from './catalogs/catalogs.module';
 import { StorageModule } from './storage/storage.module';
+import { ShoppingCartModule } from './shoppping-cart/shopping-cart.module';
 
 
 @Module({
@@ -25,6 +26,7 @@ import { StorageModule } from './storage/storage.module';
     AdminModule,
     CatalogsModule,
     StorageModule,
+    ShoppingCartModule,
   ],
 })
 export class AppModule {}

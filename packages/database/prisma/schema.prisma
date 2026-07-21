@@ -938,6 +938,7 @@ model CarritoItem {
 
   @@unique([carritoId, productoVarianteId])
   @@index([carritoId])
+  @@index([productoVarianteId])
   @@map("carritos_items")
 }
 
@@ -1032,6 +1033,7 @@ model PedidoItem {
   @@index([pedidoId])
   @@index([productoVarianteId])
   @@index([vendedorId])
+  @@index([pedidoId, vendedorId])  
   @@map("pedidos_items")
 }
 

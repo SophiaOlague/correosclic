@@ -17,12 +17,14 @@ import { InsufficientStockException } from '../../domain/exceptions/insufficient
 import { ReleaseInventoryDto } from '../dto/release-inventory.dto';
 import { InsufficientReservedStockException } from '../../domain/exceptions/insufficient-reserved-stock.exception';
 import { ConfirmInventoryDto } from '../../application/dto/confirm-inventory.dto';
+import { VariantRepository } from '../../infrastructure/repositories/variant.repository';
 
 @Injectable()
 export class InventoryService {
 
   constructor(
     private readonly repository: InventoryRepository,
+    private readonly variantRepository: VariantRepository,
   ) {}
 
   async create(
@@ -32,9 +34,9 @@ export class InventoryService {
 
     // Paso 1
     const variant =
-      await this.repository.findVariantById(
-        variantId,
-      );
+  await this.variantRepository.findById(
+    variantId,
+  );
 
     if (!variant) {
       throw new VariantNotFoundException();

@@ -43,6 +43,8 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     useClass: JwtTokenService,
 }
 ],
-  exports: [AuthService],
+  exports: [AuthService,
+    UserRepository,
+  ],
 })
 export class AuthModule {}

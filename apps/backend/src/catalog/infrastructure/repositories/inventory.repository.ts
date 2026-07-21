@@ -9,7 +9,7 @@ export class InventoryRepository {
     private readonly prisma: PrismaService,
   ) {}
 
-  async findVariantById(
+  /*async findVariantById(
     variantId: string,
   ) {
     return this.prisma.productoVariante.findUnique({
@@ -17,7 +17,7 @@ export class InventoryRepository {
         id: variantId,
       },
     });
-  }
+  }**/
 
   async findInventoryByVariantId(
     variantId: string,

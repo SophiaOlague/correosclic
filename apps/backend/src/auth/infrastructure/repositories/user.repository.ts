@@ -95,4 +95,14 @@ async findByEmailWithRoles(email: string) {
     },
   });
 }
+async findClientByUserId(userId: string) {
+  return this.prisma.cliente.findUnique({
+    where: {
+      usuarioId: userId,
+    },
+    select: {
+      id: true,
+    },
+  });
+}
 }

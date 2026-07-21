@@ -20,6 +20,7 @@ import { ProductImageRepository } from './product-image/repositories/product-ima
 import { StorageModule } from '../storage/storage.module';
 
 
+
 @Module({
   imports: [PrismaModule, StorageModule],
   controllers: [CategoryController, ProductController,ProductImageController],
@@ -43,6 +44,7 @@ import { StorageModule } from '../storage/storage.module';
     ProductService,
     VariantService,
     InventoryService,
+    VariantRepository,
   ],
 })
 export class CatalogModule {}
