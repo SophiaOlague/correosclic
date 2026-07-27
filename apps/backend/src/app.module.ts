@@ -10,6 +10,7 @@ import { AdminModule } from './admin/admin.module';
 import { CatalogsModule } from './catalogs/catalogs.module';
 import { StorageModule } from './storage/storage.module';
 import { ShoppingCartModule } from './shoppping-cart/shopping-cart.module';
+import { CheckoutModule } from './checkout/checkout.module';
 
 
 @Module({
@@ -27,6 +28,7 @@ import { ShoppingCartModule } from './shoppping-cart/shopping-cart.module';
     CatalogsModule,
     StorageModule,
     ShoppingCartModule,
+    CheckoutModule,
   ],
 })
 export class AppModule {}
