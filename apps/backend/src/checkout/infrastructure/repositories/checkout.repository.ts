@@ -51,6 +51,7 @@ export class CheckoutRepository {
 
                     tienda: {
                       select: {
+                        nombre: true,
                         vendedorId: true,
 
                         vendedor: {
@@ -108,6 +109,54 @@ export class CheckoutRepository {
             },
           },
         },
+      },
+    });
+  }
+
+  async findDeliveryAddressById(
+    clienteId: string,
+    direccionId: string,
+  ) {
+    return this.prisma.direccionCliente.findFirst({
+      where: {
+        clienteId,
+        direccionId,
+      },
+      select: {
+        direccion: {
+          select: {
+            id: true,
+
+            codigoPostal: {
+              select: {
+                latitud: true,
+                longitud: true,
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  async findAddressesByClientId(clienteId: string) {
+    return this.prisma.direccionCliente.findMany({
+      where: {
+        clienteId,
+      },
+      select: {
+        esPrincipal: true,
+
+        direccion: {
+          select: {
+            id: true,
+            alias: true,
+            direccionFormateada: true,
+          },
+        },
+      },
+      orderBy: {
+        esPrincipal: 'desc',
       },
     });
   }
@@ -178,3 +227,7 @@ export type CheckoutCart = Awaited<
 export type CheckoutCartAggregate = NonNullable<CheckoutCart>;
 export type CheckoutCartItem =
   CheckoutCartAggregate['items'][number];
+
+export type CheckoutAddressRecord = Awaited<
+  ReturnType<CheckoutRepository['findAddressesByClientId']>
+>[number];

@@ -46,6 +46,19 @@ export async function seedShoppingCart(prisma: PrismaClient) {
     },
   });
 
+  // De los otros vendedores (Jalisco y Quintana Roo), para probar checkout multivendedor
+  const monitorLg = await prisma.productoVariante.findUniqueOrThrow({
+    where: {
+      sku: 'LG-MON24-BLK',
+    },
+  });
+
+  const hamaca = await prisma.productoVariante.findUniqueOrThrow({
+    where: {
+      sku: 'HAM-YUC-XL',
+    },
+  });
+
   /*
   |--------------------------------------------------------------------------
   | CARRITO
@@ -91,6 +104,14 @@ export async function seedShoppingCart(prisma: PrismaClient) {
     {
       varianteId: libreta.id,
       cantidad: 1,
+    },
+    {
+      varianteId: monitorLg.id,
+      cantidad: 1,
+    },
+    {
+      varianteId: hamaca.id,
+      cantidad: 2,
     },
   ];
 

@@ -14,6 +14,12 @@ export class CheckoutSummaryDto {
 
   total: number;
 
+  /** Informativo: IVA ya incluido en subtotal + envío (los precios son con IVA incluido). */
+  ivaIncluido: number;
+
+  /** Informativo: comisión de CorreosClic sobre el subtotal (se liquida a vendedores, no se le suma al total del cliente). */
+  comisionMarketplace: number;
+
   canCheckout: boolean;
 
   warnings: string[];

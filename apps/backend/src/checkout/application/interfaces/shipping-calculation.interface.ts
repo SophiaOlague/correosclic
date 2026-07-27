@@ -2,6 +2,7 @@ import { GeoCoordinates } from '../../domain/services/haversine-distance.calcula
 
 export interface ShippingCalculationItem {
   vendedorId: string;
+  nombreTienda: string;
   estadoOperacion: GeoCoordinates;
   pesoKg: number;
   cantidad: number;
@@ -9,10 +10,13 @@ export interface ShippingCalculationItem {
 
 export interface VendorShippingQuote {
   vendedorId: string;
+  nombreTienda: string;
   pesoKg: number;
   distanciaKm: number;
   zonaTarifariaCodigo: string;
   tarifa: number;
+  esTarifaBase: boolean;
+  recargoAplicado?: number;
 }
 
 export interface ShippingCalculationResult {

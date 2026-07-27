@@ -3,18 +3,27 @@ import { Injectable } from '@nestjs/common';
 import {
   CheckoutRepository,
   CheckoutCartItem,
+  CheckoutAddressRecord,
 } from '../../infrastructure/repositories/checkout.repository';
 
 import { UserRepository } from '../../../auth/infrastructure/repositories/user.repository';
+import { SystemConfigRepository } from '../../../system-config/infrastructure/repositories/system-config.repository';
+import { ConfiguracionSistemaKey } from '../../../system-config/domain/configuracion-sistema-key';
 
 import { CheckoutSummaryDto } from '../dto/checkout-summary.dto';
 import { CheckoutItemDto } from '../dto/checkout-item.dto';
+import { CheckoutAddressDto } from '../dto/checkout-address.dto';
 
 import { CheckoutTotalService } from './checkout-total.service';
 import { ShippingCalculatorService } from './shipping-calculator.service';
 
 import { GeoCoordinates } from '../../domain/services/haversine-distance.calculator';
 import { ShippingCalculationItem } from '../interfaces/shipping-calculation.interface';
+
+import {
+  roundCurrency,
+  roundWeight,
+} from '../../domain/utils/rounding.util';
 
 import { EmptyCheckoutException } from '../../domain/exceptions/empty-checkout.exception';
 import { CustomerNotFoundException } from '../../domain/exceptions/customer-not-found.exception';
@@ -28,10 +37,12 @@ export class CheckoutService {
     private readonly totals: CheckoutTotalService,
     private readonly shippingCalculator: ShippingCalculatorService,
     private readonly userRepository: UserRepository,
+    private readonly systemConfigRepository: SystemConfigRepository,
   ) {}
 
   async getCheckout(
     userId: string,
+    direccionId?: string,
   ): Promise<CheckoutSummaryDto> {
     const client = await this.getClientByUserId(userId);
 
@@ -70,8 +81,10 @@ export class CheckoutService {
       })),
     );
 
-    const destination =
-      await this.getDeliveryDestination(client.id);
+    const destination = await this.getDeliveryDestination(
+      client.id,
+      direccionId,
+    );
 
     const shippingItems = this.buildShippingItems(
       cart.items,
@@ -83,7 +96,29 @@ export class CheckoutService {
         destination,
       );
 
-    const total = subtotal + shippingResult.costoEnvio;
+    const total = roundCurrency(
+      subtotal + shippingResult.costoEnvio,
+    );
+
+    const [ivaPercentage, commissionPercentage] =
+      await Promise.all([
+        this.systemConfigRepository.getNumber(
+          ConfiguracionSistemaKey.IVA_PERCENTAGE,
+        ),
+        this.systemConfigRepository.getNumber(
+          ConfiguracionSistemaKey.MARKETPLACE_COMMISSION,
+        ),
+      ]);
+
+    const ivaIncluido = this.totals.extractTax(
+      total,
+      ivaPercentage,
+    );
+
+    const comisionMarketplace = this.totals.calculateCommission(
+      subtotal,
+      commissionPercentage,
+    );
 
     return {
       items,
@@ -92,9 +127,38 @@ export class CheckoutService {
       totalWeightKg,
       shipping: shippingResult.costoEnvio,
       total,
+      ivaIncluido,
+      comisionMarketplace,
       canCheckout: warnings.length === 0,
       warnings,
       envioDetalle: shippingResult.cotizacionesPorVendedor,
+    };
+  }
+
+  async listAddresses(
+    userId: string,
+  ): Promise<CheckoutAddressDto[]> {
+    const client = await this.getClientByUserId(userId);
+
+    const addresses =
+      await this.repository.findAddressesByClientId(
+        client.id,
+      );
+
+    return addresses.map((address) =>
+      this.toAddressDto(address),
+    );
+  }
+
+  private toAddressDto(
+    address: CheckoutAddressRecord,
+  ): CheckoutAddressDto {
+    return {
+      id: address.direccion.id,
+      alias: address.direccion.alias,
+      direccionFormateada:
+        address.direccion.direccionFormateada,
+      esPrincipal: address.esPrincipal,
     };
   }
 
@@ -130,9 +194,13 @@ export class CheckoutService {
 
       precioUnitario,
 
-      subtotal: precioUnitario * item.cantidad,
+      subtotal: roundCurrency(
+        precioUnitario * item.cantidad,
+      ),
 
-      pesoKg: pesoUnitarioKg * item.cantidad,
+      pesoKg: roundWeight(
+        pesoUnitarioKg * item.cantidad,
+      ),
     };
   }
 
@@ -163,6 +231,9 @@ export class CheckoutService {
       const vendedorId =
         item.productoVariante.producto.tienda.vendedorId;
 
+      const nombreTienda =
+        item.productoVariante.producto.tienda.nombre;
+
       const estadoOperacion =
         item.productoVariante.producto.tienda.vendedor
           .estadoOperacion;
@@ -179,6 +250,7 @@ export class CheckoutService {
 
       return {
         vendedorId,
+        nombreTienda,
         estadoOperacion: {
           latitud: Number(estadoOperacion.latitud),
           longitud: Number(estadoOperacion.longitud),
@@ -193,20 +265,34 @@ export class CheckoutService {
 
   private async getDeliveryDestination(
     clienteId: string,
+    direccionId?: string,
   ): Promise<GeoCoordinates> {
-    const direccionCliente =
-      await this.repository.findPrincipalDeliveryAddress(
-        clienteId,
+    const direccionCliente = direccionId
+      ? await this.repository.findDeliveryAddressById(
+          clienteId,
+          direccionId,
+        )
+      : await this.repository.findPrincipalDeliveryAddress(
+          clienteId,
+        );
+
+    if (!direccionCliente) {
+      throw new DeliveryAddressNotFoundException(
+        direccionId
+          ? 'La dirección de entrega indicada no existe o no pertenece al cliente.'
+          : undefined,
       );
+    }
 
     if (
-      !direccionCliente ||
       direccionCliente.direccion.codigoPostal.latitud ===
         null ||
       direccionCliente.direccion.codigoPostal.longitud ===
         null
     ) {
-      throw new DeliveryAddressNotFoundException();
+      throw new DeliveryAddressNotFoundException(
+        'La dirección de entrega no tiene coordenadas registradas.',
+      );
     }
 
     return {

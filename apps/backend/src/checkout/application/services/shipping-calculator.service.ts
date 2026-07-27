@@ -14,6 +14,11 @@ import { ShippingZoneNotFoundException } from '../../domain/exceptions/shipping-
 import { ShippingRateNotFoundException } from '../../domain/exceptions/shipping-rate-not-found.exception';
 
 import {
+  roundDistance,
+  roundWeight,
+} from '../../domain/utils/rounding.util';
+
+import {
   ShippingCalculationItem,
   ShippingCalculationResult,
   VendorShippingQuote,
@@ -21,6 +26,7 @@ import {
 
 interface VendorShipment {
   vendedorId: string;
+  nombreTienda: string;
   estadoOperacion: GeoCoordinates;
   pesoTotalKg: number;
 }
@@ -44,7 +50,7 @@ export class ShippingCalculatorService {
   ): Promise<ShippingCalculationResult> {
     const vendorShipments = this.groupByVendor(items);
 
-    const cotizacionesPorVendedor = await Promise.all(
+    const cotizaciones = await Promise.all(
       vendorShipments.map((shipment) =>
         this.quoteVendor(shipment, destination),
       ),
@@ -53,15 +59,39 @@ export class ShippingCalculatorService {
     const additionalVendorFactor =
       await this.getAdditionalVendorFactor();
 
-    const costoEnvio = this.aggregationStrategy.aggregate(
-      cotizacionesPorVendedor.map(
-        (cotizacion) => cotizacion.tarifa,
-      ),
-      additionalVendorFactor,
+    const { total, contribuciones } =
+      this.aggregationStrategy.aggregate(
+        cotizaciones.map((cotizacion) => ({
+          vendedorId: cotizacion.vendedorId,
+          tarifa: cotizacion.tarifa,
+        })),
+        additionalVendorFactor,
+      );
+
+    const contribucionesPorVendedor = new Map(
+      contribuciones.map((contribucion) => [
+        contribucion.vendedorId,
+        contribucion,
+      ]),
     );
 
+    const cotizacionesPorVendedor: VendorShippingQuote[] =
+      cotizaciones.map((cotizacion) => {
+        const contribucion = contribucionesPorVendedor.get(
+          cotizacion.vendedorId,
+        );
+
+        return {
+          ...cotizacion,
+          esTarifaBase: contribucion?.esTarifaBase ?? false,
+          recargoAplicado: contribucion?.esTarifaBase
+            ? undefined
+            : contribucion?.montoAplicado,
+        };
+      });
+
     return {
-      costoEnvio,
+      costoEnvio: total,
       cotizacionesPorVendedor,
     };
   }
@@ -69,7 +99,9 @@ export class ShippingCalculatorService {
   private async quoteVendor(
     shipment: VendorShipment,
     destination: GeoCoordinates,
-  ): Promise<VendorShippingQuote> {
+  ): Promise<
+    Omit<VendorShippingQuote, 'esTarifaBase' | 'recargoAplicado'>
+  > {
     const distanciaKm = this.distanceCalculator.calculateKm(
       shipment.estadoOperacion,
       destination,
@@ -99,8 +131,9 @@ export class ShippingCalculatorService {
 
     return {
       vendedorId: shipment.vendedorId,
-      pesoKg: shipment.pesoTotalKg,
-      distanciaKm,
+      nombreTienda: shipment.nombreTienda,
+      pesoKg: roundWeight(shipment.pesoTotalKg),
+      distanciaKm: roundDistance(distanciaKm),
       zonaTarifariaCodigo: zona.codigo,
       tarifa: Number(tarifa.precioConIva),
     };
@@ -121,6 +154,7 @@ export class ShippingCalculatorService {
       } else {
         shipmentsByVendor.set(item.vendedorId, {
           vendedorId: item.vendedorId,
+          nombreTienda: item.nombreTienda,
           estadoOperacion: item.estadoOperacion,
           pesoTotalKg: pesoItem,
         });

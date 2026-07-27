@@ -111,6 +111,89 @@ export async function seedAddresses(prisma: PrismaClient) {
       },
     });
   }
+
+  /*
+  |--------------------------------------------------------------------------
+  | SEGUNDA DIRECCIÓN DEL CLIENTE (no principal, para probar selección)
+  |--------------------------------------------------------------------------
+  */
+
+  const estadoJalisco =
+    await prisma.estadoProvincia.findFirstOrThrow({
+      where: {
+        nombre: 'Jalisco',
+      },
+    });
+
+  const ciudadGuadalajara = await prisma.ciudad.findFirstOrThrow(
+    {
+      where: {
+        nombre: 'Guadalajara',
+        estadoProvinciaId: estadoJalisco.id,
+      },
+    },
+  );
+
+  const codigoPostalGuadalajara =
+    await prisma.codigoPostal.findFirstOrThrow({
+      where: {
+        codigo: '44100',
+        ciudadId: ciudadGuadalajara.id,
+      },
+    });
+
+  let direccionOficinaCliente =
+    await prisma.direccion.findFirst({
+      where: {
+        alias: 'Oficina',
+        calle: 'Av. Chapultepec',
+        numeroExterior: '250',
+      },
+    });
+
+  if (!direccionOficinaCliente) {
+    direccionOficinaCliente = await prisma.direccion.create({
+      data: {
+        paisId: pais.id,
+        estadoProvinciaId: estadoJalisco.id,
+        ciudadId: ciudadGuadalajara.id,
+        codigoPostalId: codigoPostalGuadalajara.id,
+
+        alias: 'Oficina',
+
+        calle: 'Av. Chapultepec',
+        numeroExterior: '250',
+        numeroInterior: '4',
+        colonia: 'Americana',
+        referencias: 'Edificio de cristal, planta baja',
+
+        direccionFormateada:
+          'Av. Chapultepec 250-4, Americana, Guadalajara, Jal.',
+
+        latitud: codigoPostalGuadalajara.latitud!,
+        longitud: codigoPostalGuadalajara.longitud!,
+      },
+    });
+  }
+
+  const relacionOficinaCliente =
+    await prisma.direccionCliente.findFirst({
+      where: {
+        clienteId: clienteUsuario.cliente.id,
+        direccionId: direccionOficinaCliente.id,
+      },
+    });
+
+  if (!relacionOficinaCliente) {
+    await prisma.direccionCliente.create({
+      data: {
+        clienteId: clienteUsuario.cliente.id,
+        direccionId: direccionOficinaCliente.id,
+        esPrincipal: false,
+      },
+    });
+  }
+
     /*
   |--------------------------------------------------------------------------
   | DIRECCIÓN DEL VENDEDOR
@@ -169,10 +252,14 @@ export async function seedAddresses(prisma: PrismaClient) {
   }
 
   console.log('   ✅ Dirección del cliente creada');
+  console.log(
+    '   ✅ Segunda dirección del cliente (Guadalajara) creada',
+  );
   console.log('   ✅ Dirección del vendedor creada');
 
   return {
     clienteDireccion: direccionCliente,
+    clienteDireccionOficina: direccionOficinaCliente,
     vendedorDireccion: direccionVendedor,
   };
 }

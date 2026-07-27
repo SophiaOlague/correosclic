@@ -1,6 +1,12 @@
 import { Injectable } from '@nestjs/common';
 
-import { ShippingAggregationStrategy } from './shipping-aggregation-strategy.interface';
+import {
+  ShippingAggregationResult,
+  ShippingAggregationStrategy,
+  ShippingVendorContribution,
+  ShippingVendorRate,
+} from './shipping-aggregation-strategy.interface';
+import { roundCurrency } from '../utils/rounding.util';
 
 /**
  * Regla de negocio para pedidos multivendedor: la tarifa más alta se cobra
@@ -14,22 +20,51 @@ export class HighestPlusPartialShippingAggregationStrategy
   implements ShippingAggregationStrategy
 {
   aggregate(
-    vendorRates: number[],
+    vendorRates: ShippingVendorRate[],
     additionalVendorFactor: number,
-  ): number {
+  ): ShippingAggregationResult {
     if (vendorRates.length === 0) {
-      return 0;
+      return {
+        total: 0,
+        contribuciones: [],
+      };
     }
 
-    const [base, ...additionalRates] = [...vendorRates].sort(
-      (a, b) => b - a,
+    const [base, ...additionalRates] = [
+      ...vendorRates,
+    ].sort((a, b) => b.tarifa - a.tarifa);
+
+    const contribuciones: ShippingVendorContribution[] = [
+      {
+        vendedorId: base.vendedorId,
+        tarifa: base.tarifa,
+        montoAplicado: base.tarifa,
+        esTarifaBase: true,
+      },
+
+      ...additionalRates.map(
+        (rate): ShippingVendorContribution => ({
+          vendedorId: rate.vendedorId,
+          tarifa: rate.tarifa,
+          montoAplicado: roundCurrency(
+            rate.tarifa * additionalVendorFactor,
+          ),
+          esTarifaBase: false,
+        }),
+      ),
+    ];
+
+    const total = roundCurrency(
+      contribuciones.reduce(
+        (sum, contribucion) =>
+          sum + contribucion.montoAplicado,
+        0,
+      ),
     );
 
-    const additionalCost = additionalRates.reduce(
-      (total, rate) => total + rate * additionalVendorFactor,
-      0,
-    );
-
-    return base + additionalCost;
+    return {
+      total,
+      contribuciones,
+    };
   }
 }
