@@ -1,4 +1,4 @@
-import { GeoCoordinates } from '../../domain/services/haversine-distance.calculator';
+import { GeoCoordinates } from '../../../shared/geo/haversine-distance.calculator';
 
 export interface ShippingCalculationItem {
   vendedorId: string;

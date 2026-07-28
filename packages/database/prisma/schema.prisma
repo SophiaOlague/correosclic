@@ -144,21 +144,21 @@ model Region {
 }
 
 model EstadoProvincia {
-  id                 String      @id @default(uuid()) @db.Uuid
-  paisId             String      @db.Uuid
-  regionId           String?     @db.Uuid
-  nombre             String      @db.VarChar(100)
-  codigo             String?     @db.VarChar(20)
-  latitud            Decimal?    @db.Decimal(11, 8)
-  longitud           Decimal?    @db.Decimal(12, 8)
-  activo             Boolean     @default(true)
-  createdAt          DateTime    @default(now())
-  updatedAt          DateTime    @updatedAt
-  ciudades           Ciudad[]
-  direcciones        Direccion[]
-  vendedores         Vendedor[]
-  pais               Pais        @relation(fields: [paisId], references: [id])
-  region             Region?     @relation(fields: [regionId], references: [id])
+  id          String      @id @default(uuid()) @db.Uuid
+  paisId      String      @db.Uuid
+  regionId    String?     @db.Uuid
+  nombre      String      @db.VarChar(100)
+  codigo      String?     @db.VarChar(20)
+  latitud     Decimal?    @db.Decimal(11, 8)
+  longitud    Decimal?    @db.Decimal(12, 8)
+  activo      Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  ciudades    Ciudad[]
+  direcciones Direccion[]
+  vendedores  Vendedor[]
+  pais        Pais        @relation(fields: [paisId], references: [id])
+  region      Region?     @relation(fields: [regionId], references: [id])
 
   @@unique([paisId, nombre])
   @@index([paisId])
@@ -297,18 +297,19 @@ model Repartidor {
 }
 
 model Vehiculo {
-  id           String               @id @default(uuid()) @db.Uuid
-  sucursalId   String               @db.Uuid
-  placas       String               @unique @db.VarChar(20)
-  marca        String               @db.VarChar(100)
-  modelo       String               @db.VarChar(100)
-  anio         Int
-  capacidadKg  Decimal              @db.Decimal(10, 2)
-  activo       Boolean              @default(true)
-  createdAt    DateTime             @default(now())
-  updatedAt    DateTime             @updatedAt
-  asignaciones AsignacionVehiculo[]
-  sucursal     Sucursal             @relation(fields: [sucursalId], references: [id])
+  id             String                  @id @default(uuid()) @db.Uuid
+  sucursalId     String                  @db.Uuid
+  placas         String                  @unique @db.VarChar(20)
+  marca          String                  @db.VarChar(100)
+  modelo         String                  @db.VarChar(100)
+  anio           Int
+  capacidadKg    Decimal                 @db.Decimal(10, 2)
+  activo         Boolean                 @default(true)
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+  asignaciones   AsignacionVehiculo[]
+  sucursal       Sucursal                @relation(fields: [sucursalId], references: [id])
+  transferencias TransferenciaSucursal[]
 
   @@index([sucursalId])
   @@index([activo])
@@ -418,7 +419,6 @@ model Vendedor {
   activo              Boolean               @default(true)
   createdAt           DateTime              @default(now())
   updatedAt           DateTime              @updatedAt
-  envios              Envio[]
   liquidaciones       LiquidacionVendedor[]
   pedidoItems         PedidoItem[]
   pedidoVendedores    PedidoVendedor[]
@@ -615,7 +615,6 @@ model Pedido {
   fechaPago           DateTime?
   createdAt           DateTime         @default(now())
   updatedAt           DateTime         @updatedAt
-  envios              Envio[]
   pagos               Pago[]
   cliente             Cliente          @relation(fields: [clienteId], references: [id])
   direccionEntrega    Direccion        @relation(fields: [direccionEntregaId], references: [id])
@@ -640,25 +639,26 @@ model Pedido {
 /// Pedido EN_PROCESO; todos ENTREGADO -> Pedido ENTREGADO). Esa lógica de
 /// transición no se implementa todavía.
 model PedidoVendedor {
-  id                  String               @id @default(uuid()) @db.Uuid
-  pedidoId            String               @db.Uuid
-  vendedorId          String               @db.Uuid
+  id         String @id @default(uuid()) @db.Uuid
+  pedidoId   String @db.Uuid
+  vendedorId String @db.Uuid
 
-  estado              EstadoPedidoVendedor @default(PENDIENTE_PAGO)
+  estado EstadoPedidoVendedor @default(PENDIENTE_PAGO)
 
   /// Snapshot financiero, inmutable una vez creado.
-  subtotal            Decimal              @db.Decimal(12, 2)
-  costoEnvioAsignado  Decimal              @db.Decimal(12, 2)
-  comisionMarketplace Decimal              @db.Decimal(12, 2)
+  subtotal            Decimal @db.Decimal(12, 2)
+  costoEnvioAsignado  Decimal @db.Decimal(12, 2)
+  comisionMarketplace Decimal @db.Decimal(12, 2)
   /// subtotal + costoEnvioAsignado. NO resta comisionMarketplace: representa
   /// la porción del pago del cliente, no lo que se liquidará al vendedor.
-  totalPedido         Decimal              @db.Decimal(12, 2)
+  totalPedido         Decimal @db.Decimal(12, 2)
 
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  pedido              Pedido               @relation(fields: [pedidoId], references: [id])
-  vendedor            Vendedor             @relation(fields: [vendedorId], references: [id])
+  pedido   Pedido   @relation(fields: [pedidoId], references: [id])
+  vendedor Vendedor @relation(fields: [vendedorId], references: [id])
+  envio    Envio?
 
   @@unique([pedidoId, vendedorId])
   @@index([pedidoId])
@@ -699,8 +699,7 @@ model PedidoItem {
 
 model Envio {
   id                   String                  @id @default(uuid()) @db.Uuid
-  pedidoId             String                  @db.Uuid
-  vendedorId           String                  @db.Uuid
+  pedidoVendedorId     String                  @unique @db.Uuid
   sucursalOrigenId     String                  @db.Uuid
   sucursalDestinoId    String                  @db.Uuid
   trackingInterno      String                  @unique @db.VarChar(50)
@@ -719,19 +718,16 @@ model Envio {
   tarifaEnvioId        String?                 @db.Uuid
   zonaTarifariaId      String?                 @db.Uuid
   entrega              Entrega?
-  pedido               Pedido                  @relation(fields: [pedidoId], references: [id])
+  pedidoVendedor       PedidoVendedor          @relation(fields: [pedidoVendedorId], references: [id])
   sucursalDestino      Sucursal                @relation("SucursalDestinoEnvio", fields: [sucursalDestinoId], references: [id])
   sucursalOrigen       Sucursal                @relation("SucursalOrigenEnvio", fields: [sucursalOrigenId], references: [id])
   tarifaEnvio          TarifaEnvio?            @relation(fields: [tarifaEnvioId], references: [id])
-  vendedor             Vendedor                @relation(fields: [vendedorId], references: [id])
   zonaTarifaria        ZonaTarifaria?          @relation(fields: [zonaTarifariaId], references: [id])
   items                EnvioItem[]
   eventosTracking      EventoTracking[]
   recepcionSucursal    RecepcionSucursal?
   transferencias       TransferenciaSucursal[]
 
-  @@index([pedidoId])
-  @@index([vendedorId])
   @@index([estado])
   @@index([trackingInterno])
   @@index([zonaTarifariaId])
@@ -791,14 +787,17 @@ model TransferenciaSucursal {
   envioId           String    @db.Uuid
   sucursalOrigenId  String    @db.Uuid
   sucursalDestinoId String    @db.Uuid
+  vehiculoId        String    @db.Uuid
   fechaSalida       DateTime
   fechaLlegada      DateTime?
   createdAt         DateTime  @default(now())
   envio             Envio     @relation(fields: [envioId], references: [id])
   sucursalDestino   Sucursal  @relation("TransferenciaDestino", fields: [sucursalDestinoId], references: [id])
   sucursalOrigen    Sucursal  @relation("TransferenciaOrigen", fields: [sucursalOrigenId], references: [id])
+  vehiculo          Vehiculo  @relation(fields: [vehiculoId], references: [id])
 
   @@index([envioId])
+  @@index([vehiculoId])
   @@map("transferencias_sucursal")
 }
 
@@ -1137,6 +1136,8 @@ enum EstadoEnvio {
   ENTREGADO
   DEVUELTO
   CANCELADO
+  EXTRAVIADO
+  DANADO
 }
 
 enum ResultadoIntentoEntrega {

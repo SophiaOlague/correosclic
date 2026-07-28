@@ -40,6 +40,12 @@ export async function seedConfiguracionSistema(
   descripcion:
     'Porcentaje (%) que aporta cada vendedor adicional (distinto al de tarifa más alta) al costo de envío de un pedido multivendedor',
 },
+{
+  clave: ConfiguracionSistemaKey.MAX_DELIVERY_ATTEMPTS,
+  valor: '3',
+  descripcion:
+    'Máximo de intentos de entrega antes de devolver un envío al remitente',
+},
     ],
     skipDuplicates: true,
   });

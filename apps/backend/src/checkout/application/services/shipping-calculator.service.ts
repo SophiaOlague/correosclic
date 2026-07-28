@@ -4,8 +4,8 @@ import { CheckoutRepository } from '../../infrastructure/repositories/checkout.r
 import { SystemConfigRepository } from '../../../system-config/infrastructure/repositories/system-config.repository';
 import { ConfiguracionSistemaKey } from '../../../system-config/domain/configuracion-sistema-key';
 
-import { HaversineDistanceCalculator } from '../../domain/services/haversine-distance.calculator';
-import type { GeoCoordinates } from '../../domain/services/haversine-distance.calculator';
+import { HaversineDistanceCalculator } from '../../../shared/geo/haversine-distance.calculator';
+import type { GeoCoordinates } from '../../../shared/geo/haversine-distance.calculator';
 
 import { SHIPPING_AGGREGATION_STRATEGY } from '../../domain/services/shipping-aggregation-strategy.interface';
 import type { ShippingAggregationStrategy } from '../../domain/services/shipping-aggregation-strategy.interface';

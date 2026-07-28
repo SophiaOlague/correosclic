@@ -17,7 +17,7 @@ import { CheckoutAddressDto } from '../dto/checkout-address.dto';
 import { CheckoutTotalService } from './checkout-total.service';
 import { ShippingCalculatorService } from './shipping-calculator.service';
 
-import { GeoCoordinates } from '../../domain/services/haversine-distance.calculator';
+import { GeoCoordinates } from '../../../shared/geo/haversine-distance.calculator';
 import { ShippingCalculationItem } from '../interfaces/shipping-calculation.interface';
 
 import {
