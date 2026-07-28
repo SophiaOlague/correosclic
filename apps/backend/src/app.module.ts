@@ -9,6 +9,11 @@ import { SellerModule } from './seller/seller.module';
 import { AdminModule } from './admin/admin.module';
 import { CatalogsModule } from './catalogs/catalogs.module';
 import { StorageModule } from './storage/storage.module';
+import { ShoppingCartModule } from './shoppping-cart/shopping-cart.module';
+import { CheckoutModule } from './checkout/checkout.module';
+import { OrdersModule } from './orders/orders.module';
+import { IdempotencyModule } from './idempotency/idempotency.module';
+import { PaymentsModule } from './payments/payments.module';
 
 
 @Module({
@@ -18,6 +23,7 @@ import { StorageModule } from './storage/storage.module';
       envFilePath: '.env',
     }),
     PrismaModule,
+    IdempotencyModule,
     HealthModule,
     AuthModule,
     CatalogModule,
@@ -25,6 +31,10 @@ import { StorageModule } from './storage/storage.module';
     AdminModule,
     CatalogsModule,
     StorageModule,
+    ShoppingCartModule,
+    CheckoutModule,
+    OrdersModule,
+    PaymentsModule,
   ],
 })
 export class AppModule {}
