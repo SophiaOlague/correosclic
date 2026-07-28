@@ -11,6 +11,8 @@ import { CatalogsModule } from './catalogs/catalogs.module';
 import { StorageModule } from './storage/storage.module';
 import { ShoppingCartModule } from './shoppping-cart/shopping-cart.module';
 import { CheckoutModule } from './checkout/checkout.module';
+import { OrdersModule } from './orders/orders.module';
+import { IdempotencyModule } from './idempotency/idempotency.module';
 
 
 @Module({
@@ -20,6 +22,7 @@ import { CheckoutModule } from './checkout/checkout.module';
       envFilePath: '.env',
     }),
     PrismaModule,
+    IdempotencyModule,
     HealthModule,
     AuthModule,
     CatalogModule,
@@ -29,6 +32,7 @@ import { CheckoutModule } from './checkout/checkout.module';
     StorageModule,
     ShoppingCartModule,
     CheckoutModule,
+    OrdersModule,
   ],
 })
 export class AppModule {}

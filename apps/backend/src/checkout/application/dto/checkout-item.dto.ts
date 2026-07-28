@@ -3,6 +3,10 @@ export class CheckoutItemDto {
 
   productoVarianteId: string;
 
+  vendedorId: string;
+
+  nombreTienda: string;
+
   nombre: string;
 
   sku: string;

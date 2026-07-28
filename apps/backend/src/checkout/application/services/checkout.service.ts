@@ -81,10 +81,11 @@ export class CheckoutService {
       })),
     );
 
-    const destination = await this.getDeliveryDestination(
-      client.id,
-      direccionId,
-    );
+    const { direccionId: resolvedDireccionId, ...destination } =
+      await this.getDeliveryDestination(
+        client.id,
+        direccionId,
+      );
 
     const shippingItems = this.buildShippingItems(
       cart.items,
@@ -122,6 +123,7 @@ export class CheckoutService {
 
     return {
       items,
+      direccionId: resolvedDireccionId,
       itemsCount,
       subtotal,
       totalWeightKg,
@@ -177,6 +179,12 @@ export class CheckoutService {
       productoId: item.productoVariante.producto.id,
 
       productoVarianteId: item.productoVariante.id,
+
+      vendedorId:
+        item.productoVariante.producto.tienda.vendedorId,
+
+      nombreTienda:
+        item.productoVariante.producto.tienda.nombre,
 
       nombre: item.productoVariante.producto.nombre,
 
@@ -266,7 +274,7 @@ export class CheckoutService {
   private async getDeliveryDestination(
     clienteId: string,
     direccionId?: string,
-  ): Promise<GeoCoordinates> {
+  ): Promise<GeoCoordinates & { direccionId: string }> {
     const direccionCliente = direccionId
       ? await this.repository.findDeliveryAddressById(
           clienteId,
@@ -296,6 +304,7 @@ export class CheckoutService {
     }
 
     return {
+      direccionId: direccionCliente.direccion.id,
       latitud: Number(
         direccionCliente.direccion.codigoPostal.latitud,
       ),

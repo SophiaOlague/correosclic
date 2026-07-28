@@ -4,6 +4,9 @@ import { VendorShippingQuoteDto } from './vendor-shipping-quote.dto';
 export class CheckoutSummaryDto {
   items: CheckoutItemDto[];
 
+  /** Dirección de entrega efectivamente usada para cotizar el envío. */
+  direccionId: string;
+
   itemsCount: number;
 
   subtotal: number;

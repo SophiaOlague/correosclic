@@ -25,6 +25,7 @@ model Usuario {
   cuentasExternas  CuentaExterna[]
   dispositivosPush DispositivoPush[]
   empleado         Empleado?
+  idempotencyKeys  IdempotencyKey[]
   notificaciones   Notificacion[]
   sesiones         Sesion[]
   usuarioRoles     UsuarioRol[]
@@ -418,6 +419,7 @@ model Vendedor {
   envios              Envio[]
   liquidaciones       LiquidacionVendedor[]
   pedidoItems         PedidoItem[]
+  pedidoVendedores    PedidoVendedor[]
   tienda              Tienda?
   estadoOperacion     EstadoProvincia?      @relation(fields: [estadoOperacionId], references: [id])
   solicitudAprobada   SolicitudVendedor     @relation(fields: [solicitudAprobadaId], references: [id])
@@ -598,30 +600,69 @@ model CarritoItem {
 }
 
 model Pedido {
-  id                  String       @id @default(uuid()) @db.Uuid
-  clienteId           String       @db.Uuid
-  direccionEntregaId  String       @db.Uuid
-  codigoPedido        String       @unique @db.VarChar(50)
-  estado              EstadoPedido @default(PENDIENTE_PAGO)
-  subtotal            Decimal      @db.Decimal(12, 2)
-  costoEnvio          Decimal      @db.Decimal(12, 2)
-  comisionCorreosClic Decimal      @db.Decimal(12, 2)
-  totalVendedores     Decimal      @db.Decimal(12, 2)
-  total               Decimal      @db.Decimal(12, 2)
+  id                  String           @id @default(uuid()) @db.Uuid
+  clienteId           String           @db.Uuid
+  direccionEntregaId  String           @db.Uuid
+  codigoPedido        String           @unique @db.VarChar(50)
+  estado              EstadoPedido     @default(PENDIENTE_PAGO)
+  subtotal            Decimal          @db.Decimal(12, 2)
+  costoEnvio          Decimal          @db.Decimal(12, 2)
+  comisionCorreosClic Decimal          @db.Decimal(12, 2)
+  totalVendedores     Decimal          @db.Decimal(12, 2)
+  total               Decimal          @db.Decimal(12, 2)
   fechaPago           DateTime?
-  createdAt           DateTime     @default(now())
-  updatedAt           DateTime     @updatedAt
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
   envios              Envio[]
   pagos               Pago[]
-  cliente             Cliente      @relation(fields: [clienteId], references: [id])
-  direccionEntrega    Direccion    @relation(fields: [direccionEntregaId], references: [id])
+  cliente             Cliente          @relation(fields: [clienteId], references: [id])
+  direccionEntrega    Direccion        @relation(fields: [direccionEntregaId], references: [id])
   items               PedidoItem[]
+  pedidoVendedores    PedidoVendedor[]
   reembolsos          Reembolso[]
 
   @@index([clienteId])
   @@index([estado])
   @@index([fechaPago])
   @@map("pedidos")
+}
+
+/// Porción de un Pedido que corresponde a un vendedor específico.
+/// Es una entidad de dominio propia (no solo un desglose financiero): será el
+/// punto de anclaje para Logistics (Envio.pedidoVendedorId a futuro),
+/// Payments/Payouts y devoluciones parciales por vendedor.
+///
+/// Pedido.estado representa la compra completa del cliente; a futuro se
+/// derivará agregando los EstadoPedidoVendedor de todos sus PedidoVendedor
+/// (ej. todos PENDIENTE_PAGO -> Pedido PENDIENTE_PAGO; estados mixtos ->
+/// Pedido EN_PROCESO; todos ENTREGADO -> Pedido ENTREGADO). Esa lógica de
+/// transición no se implementa todavía.
+model PedidoVendedor {
+  id                  String               @id @default(uuid()) @db.Uuid
+  pedidoId            String               @db.Uuid
+  vendedorId          String               @db.Uuid
+
+  estado              EstadoPedidoVendedor @default(PENDIENTE_PAGO)
+
+  /// Snapshot financiero, inmutable una vez creado.
+  subtotal            Decimal              @db.Decimal(12, 2)
+  costoEnvioAsignado  Decimal              @db.Decimal(12, 2)
+  comisionMarketplace Decimal              @db.Decimal(12, 2)
+  /// subtotal + costoEnvioAsignado. NO resta comisionMarketplace: representa
+  /// la porción del pago del cliente, no lo que se liquidará al vendedor.
+  totalPedido         Decimal              @db.Decimal(12, 2)
+
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+
+  pedido              Pedido               @relation(fields: [pedidoId], references: [id])
+  vendedor            Vendedor             @relation(fields: [vendedorId], references: [id])
+
+  @@unique([pedidoId, vendedorId])
+  @@index([pedidoId])
+  @@index([vendedorId])
+  @@index([estado])
+  @@map("pedidos_vendedores")
 }
 
 model PedidoItem {
@@ -632,6 +673,7 @@ model PedidoItem {
   nombreTienda         String                       @db.VarChar(255)
   nombreProducto       String                       @db.VarChar(255)
   sku                  String                       @db.VarChar(100)
+  imagenUrl            String?                      @db.VarChar(500)
   cantidad             Int
   precioUnitario       Decimal                      @db.Decimal(12, 2)
   subtotal             Decimal                      @db.Decimal(12, 2)
@@ -976,6 +1018,37 @@ model ConfiguracionSistema {
   @@map("configuraciones_sistema")
 }
 
+/// Registro de idempotencia genérico (inspirado en Stripe), reutilizable por
+/// cualquier operación crítica que no deba ejecutarse dos veces por reintentos
+/// de red o doble clic (Orders hoy, Payments/Payouts después).
+///
+/// El cliente (web/móvil) genera un UUID por intento de operación y lo manda
+/// en el header Idempotency-Key. huellaSolicitud es un hash del body: si la
+/// misma clave llega con un body distinto, es un error del cliente (reusó la
+/// clave para otra operación), no un reintento legítimo.
+model IdempotencyKey {
+  id              String             @id @default(uuid()) @db.Uuid
+  usuarioId       String             @db.Uuid
+  /// Valor del header Idempotency-Key.
+  clave           String             @db.VarChar(255)
+  /// "METODO:ruta" (ej. "POST:/orders"), para que la misma clave no choque
+  /// entre operaciones distintas.
+  ruta            String             @db.VarChar(255)
+  huellaSolicitud String             @db.VarChar(64)
+  estado          EstadoIdempotencia @default(EN_PROCESO)
+  statusCode      Int?
+  /// Respuesta cacheada para reproducirla tal cual en reintentos.
+  respuesta       Json?
+  createdAt       DateTime           @default(now())
+  completadoEn    DateTime?
+  usuario         Usuario            @relation(fields: [usuarioId], references: [id])
+
+  @@unique([usuarioId, clave, ruta])
+  @@index([usuarioId])
+  @@index([createdAt])
+  @@map("idempotency_keys")
+}
+
 model Auditoria {
   id        String   @id @default(uuid()) @db.Uuid
   usuarioId String?  @db.Uuid
@@ -1019,6 +1092,19 @@ enum TipoDocumentoVendedor {
 }
 
 enum EstadoPedido {
+  PENDIENTE_PAGO
+  PAGADO
+  PREPARANDO
+  ENVIADO
+  ENTREGADO
+  CANCELADO
+  REEMBOLSADO
+}
+
+/// Estado del procesamiento de la porción de un vendedor dentro de un pedido.
+/// Independiente de EstadoPedido: cada vendedor avanza (prepara/envía/entrega)
+/// a su propio ritmo dentro del mismo pedido.
+enum EstadoPedidoVendedor {
   PENDIENTE_PAGO
   PAGADO
   PREPARANDO
@@ -1078,4 +1164,9 @@ enum PlataformaPush {
   ANDROID
   IOS
   WEB
+}
+
+enum EstadoIdempotencia {
+  EN_PROCESO
+  COMPLETADA
 }
