@@ -13,6 +13,7 @@ import { ShoppingCartModule } from './shoppping-cart/shopping-cart.module';
 import { CheckoutModule } from './checkout/checkout.module';
 import { OrdersModule } from './orders/orders.module';
 import { IdempotencyModule } from './idempotency/idempotency.module';
+import { PaymentsModule } from './payments/payments.module';
 
 
 @Module({
@@ -33,6 +34,7 @@ import { IdempotencyModule } from './idempotency/idempotency.module';
     ShoppingCartModule,
     CheckoutModule,
     OrdersModule,
+    PaymentsModule,
   ],
 })
 export class AppModule {}

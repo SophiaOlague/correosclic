@@ -334,6 +334,8 @@ model AsignacionVehiculo {
 model Cliente {
   id                  String              @id @default(uuid()) @db.Uuid
   usuarioId           String              @unique @db.Uuid
+  /// Se crea (y se reutiliza) en el primer intento de pago; null hasta entonces.
+  stripeCustomerId    String?             @unique @db.VarChar(255)
   activo              Boolean             @default(true)
   createdAt           DateTime            @default(now())
   updatedAt           DateTime            @updatedAt
@@ -868,19 +870,30 @@ model TarifaEnvio {
   @@map("tarifas_envio")
 }
 
+/// pedidoId no tiene @unique a propósito: se permite historial de varios
+/// Pago por pedido (reintentos tras un fallo). La regla real -- "solo uno
+/// activo a la vez" -- vive en un índice único PARCIAL agregado a mano en
+/// la migración (Prisma no soporta índices condicionales en el DSL):
+///   CREATE UNIQUE INDEX pagos_pedido_activo_unique ON pagos (pedido_id)
+///     WHERE estado IN ('PENDIENTE','REQUIERE_ACCION','PROCESANDO');
 model Pago {
-  id                    String     @id @default(uuid()) @db.Uuid
-  pedidoId              String     @db.Uuid
-  stripePaymentIntentId String?    @unique @db.VarChar(255)
-  stripeChargeId        String?    @unique @db.VarChar(255)
-  estado                EstadoPago @default(PENDIENTE)
-  monto                 Decimal    @db.Decimal(12, 2)
-  moneda                String     @default("MXN") @db.Char(3)
-  comisionStripe        Decimal?   @db.Decimal(12, 2)
+  id                    String      @id @default(uuid()) @db.Uuid
+  pedidoId              String      @db.Uuid
+  stripePaymentIntentId String?     @unique @db.VarChar(255)
+  stripeChargeId        String?     @unique @db.VarChar(255)
+  /// La idempotency key exacta enviada a Stripe al crear el PaymentIntent (auditoría/debug).
+  stripeIdempotencyKey  String?     @db.VarChar(255)
+  estado                EstadoPago  @default(PENDIENTE)
+  metodoPago            MetodoPago?
+  monto                 Decimal     @db.Decimal(12, 2)
+  moneda                String      @default("MXN") @db.Char(3)
+  comisionStripe        Decimal?    @db.Decimal(12, 2)
   mensajeError          String?
-  createdAt             DateTime   @default(now())
-  updatedAt             DateTime   @updatedAt
-  pedido                Pedido     @relation(fields: [pedidoId], references: [id])
+  /// event.created de Stripe (no nuestro updatedAt) -- guarda contra webhooks fuera de orden.
+  ultimoEventoStripeEn  DateTime?
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+  pedido                Pedido      @relation(fields: [pedidoId], references: [id])
 
   @@index([pedidoId])
   @@index([estado])
@@ -1135,9 +1148,21 @@ enum ResultadoIntentoEntrega {
 
 enum EstadoPago {
   PENDIENTE
+  REQUIERE_ACCION
+  PROCESANDO
   EXITOSO
   FALLIDO
+  CANCELADO
   REEMBOLSADO
+}
+
+enum MetodoPago {
+  CARD
+  SPEI
+  OXXO
+  APPLE_PAY
+  GOOGLE_PAY
+  OTRO
 }
 
 enum EstadoReembolso {
