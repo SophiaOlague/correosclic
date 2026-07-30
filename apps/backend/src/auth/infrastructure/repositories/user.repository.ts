@@ -81,6 +81,21 @@ async getRoles(userId: string): Promise<string[]> {
   return userRoles.map((userRole) => userRole.rol.codigo);
 }
 
+async findByIdWithRoles(id: string) {
+  return this.prisma.usuario.findUnique({
+    where: {
+      id,
+    },
+    include: {
+      usuarioRoles: {
+        include: {
+          rol: true,
+        },
+      },
+    },
+  });
+}
+
 async findByEmailWithRoles(email: string) {
   return this.prisma.usuario.findUnique({
     where: {
