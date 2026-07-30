@@ -5,5 +5,7 @@ packages:
 onlyBuiltDependencies:
   - '@nestjs/core'
   - '@prisma/engines'
+  - '@tailwindcss/oxide'
+  - esbuild
   - prisma
   - unrs-resolver
