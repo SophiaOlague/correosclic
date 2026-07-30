@@ -1,4 +1,7 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+
+import { ROLES } from '@/constants/roles';
+import { useAuth } from '@/hooks/useAuth';
 
 /**
  * Estado de UI que en el export de Figma vivía dentro de `App()` y se pasaba
@@ -21,8 +24,17 @@ interface LegacyUiState {
 const LegacyUiStateContext = createContext<LegacyUiState | null>(null);
 
 export function LegacyUiStateProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+
   const [sellerStatus, setSellerStatus] = useState('approved');
-  const [mode, setMode] = useState('vendedor');
+  const [mode, setMode] = useState('cliente');
+
+  // El export arrancaba siempre en modo "vendedor". Ahora que hay sesión real,
+  // el modo inicial se deriva de los roles: un cliente sin rol VENDEDOR no
+  // debería aterrizar en el panel de vendedor.
+  useEffect(() => {
+    setMode(user?.roles.includes(ROLES.vendedor) ? 'vendedor' : 'cliente');
+  }, [user]);
 
   const value = useMemo(
     () => ({ sellerStatus, setSellerStatus, mode, setMode }),

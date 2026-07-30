@@ -8,16 +8,22 @@ const USER_KEY = 'correosclic.user';
  *
  * El backend firma el JWT con `expiresIn: '1d'` y un payload de `{ sub, email }`
  * (ver `apps/backend/src/auth/auth.module.ts`). El objeto `user` completo —con
- * nombre y roles— solo llega en la respuesta de `/auth/login` y `/auth/register`,
- * por eso se guarda junto al token y así sobrevive a un refresh de página.
+ * nombre y roles— llega en la respuesta de `/auth/login` y `/auth/register`, y
+ * se guarda junto al token para tener los datos disponibles de inmediato al
+ * arrancar la aplicación; `/auth/ping` los revalida contra el servidor.
+ *
+ * El destino depende de "Recordarme": `localStorage` si el usuario lo marca
+ * (la sesión sobrevive al cierre del navegador) y `sessionStorage` si no.
  */
+type Persistence = 'local' | 'session';
+
 export const tokenStorage = {
   getToken(): string | null {
-    return safeRead(TOKEN_KEY);
+    return read(TOKEN_KEY);
   },
 
   getUser(): AuthenticatedUser | null {
-    const raw = safeRead(USER_KEY);
+    const raw = read(USER_KEY);
 
     if (!raw) return null;
 
@@ -28,41 +34,67 @@ export const tokenStorage = {
     }
   },
 
-  save(token: string, user: AuthenticatedUser): void {
-    safeWrite(TOKEN_KEY, token);
-    safeWrite(USER_KEY, JSON.stringify(user));
+  save(token: string, user: AuthenticatedUser, persistence: Persistence = 'local'): void {
+    // Se limpian ambos almacenes para que cambiar de "Recordarme" entre
+    // sesiones no deje un token huérfano en el otro.
+    this.clear();
+
+    const store = storeFor(persistence);
+
+    write(store, TOKEN_KEY, token);
+    write(store, USER_KEY, JSON.stringify(user));
   },
 
+  /** Actualiza el usuario sin tocar el token ni cambiar de almacén. */
   saveUser(user: AuthenticatedUser): void {
-    safeWrite(USER_KEY, JSON.stringify(user));
+    const store = read(TOKEN_KEY, 'local') !== null ? storeFor('local') : storeFor('session');
+
+    write(store, USER_KEY, JSON.stringify(user));
   },
 
   clear(): void {
-    safeRemove(TOKEN_KEY);
-    safeRemove(USER_KEY);
+    for (const store of stores()) {
+      try {
+        store?.removeItem(TOKEN_KEY);
+        store?.removeItem(USER_KEY);
+      } catch {
+        /* Almacenamiento no disponible. */
+      }
+    }
   },
 };
 
-function safeRead(key: string): string | null {
+function stores(): (Storage | null)[] {
+  return [storeFor('local'), storeFor('session')];
+}
+
+function storeFor(persistence: Persistence): Storage | null {
   try {
-    return window.localStorage.getItem(key);
+    return persistence === 'local' ? window.localStorage : window.sessionStorage;
   } catch {
     return null;
   }
 }
 
-function safeWrite(key: string, value: string): void {
-  try {
-    window.localStorage.setItem(key, value);
-  } catch {
-    /* Modo privado o almacenamiento lleno: la sesión vive solo en memoria. */
+function read(key: string, only?: Persistence): string | null {
+  const candidates = only ? [storeFor(only)] : stores();
+
+  for (const store of candidates) {
+    try {
+      const value = store?.getItem(key);
+      if (value !== null && value !== undefined) return value;
+    } catch {
+      /* Modo privado: se intenta el siguiente almacén. */
+    }
   }
+
+  return null;
 }
 
-function safeRemove(key: string): void {
+function write(store: Storage | null, key: string, value: string): void {
   try {
-    window.localStorage.removeItem(key);
+    store?.setItem(key, value);
   } catch {
-    /* Ver safeWrite. */
+    /* Modo privado o almacenamiento lleno: la sesión vive solo en memoria. */
   }
 }

@@ -3,11 +3,42 @@
 Registro de las pantallas cuyo backend todavía no existe y de los contratos que
 harían falta para conectarlas. Se actualiza al cerrar cada módulo.
 
-**Última actualización:** 2026-07-30 (cierre del Módulo 0 — Scaffold)
+**Última actualización:** 2026-07-30 (cierre del Módulo 1 — Auth)
 
 > El inventario de endpoints **reales** del backend se levantó leyendo los
 > controladores de `apps/backend/src`. Ninguna pantalla debe llamar a un
 > endpoint que no aparezca ahí.
+
+---
+
+## 0. Auth — lo que el diseño ofrece y el backend no
+
+El módulo Auth quedó integrado (`POST /auth/login`, `POST /auth/register`,
+`GET /auth/ping`). Estas tres piezas del diseño **no tienen respaldo** y se
+resuelven hoy con un aviso al usuario:
+
+| Elemento del diseño | Endpoint esperado | Estado |
+| --- | --- | --- |
+| "¿Olvidaste tu contraseña?" | `POST /auth/forgot-password` + `POST /auth/reset-password` | Muestra aviso "próximamente" |
+| Botones Google / Apple | OAuth (`GET /auth/oauth/:provider`) | Muestran aviso "próximamente" |
+| Sesión larga / renovación | `POST /auth/refresh` | No existe refresh token: el JWT dura 1 día y al expirar se cierra la sesión |
+
+### ⚠️ Defecto del backend detectado (sin corregir)
+
+`EmailAlreadyExistsException` y `PasswordMismatchException`
+(`apps/backend/src/auth/domain/exceptions/`) extienden `Error` en vez de una
+excepción HTTP de NestJS. El filtro por defecto las convierte en **500 Internal
+Server Error**, así que registrarse con un correo ya existente devuelve un 500
+en lugar de un 409 con su mensaje.
+
+Todos los demás módulos sí lo hacen bien (`OrderNotFoundException extends
+NotFoundException`, `OrderStockConflictException extends ConflictException`).
+
+La corrección sería cambiar la clase base a `ConflictException` y
+`BadRequestException` respectivamente. **No se aplicó** porque el alcance
+autorizado para el backend se limitaba a `JwtStrategy`. Mientras tanto, el
+cliente HTTP traduce cualquier 5xx a un mensaje genérico en español para no
+enseñar "Internal server error" al usuario.
 
 ---
 
@@ -127,9 +158,10 @@ representen quedan con mock y navegación funcional.
 
 | Punto | Detalle |
 | --- | --- |
-| `src/app/legacy/FigmaExport.tsx` | Las 15 pantallas del export siguen en un solo archivo (4 784 líneas). Cada módulo extrae las suyas a `features/`. El archivo desaparece al terminar el Módulo 9. |
-| `src/app/legacy/LegacyUiStateProvider.tsx` | Sostiene `sellerStatus` y `mode`, que en el export vivían dentro de `App()`. `sellerStatus` lo dará el onboarding real (Módulo 8) y `mode` pasará a derivarse de los roles del usuario. |
+| `src/app/legacy/FigmaExport.tsx` | Las 13 pantallas restantes del export siguen en un solo archivo (4 604 líneas). Cada módulo extrae las suyas a `features/`. El archivo desaparece al terminar el Módulo 9. |
+| `src/app/legacy/LegacyUiStateProvider.tsx` | Sostiene `sellerStatus`, que dará el onboarding real (Módulo 8). El `mode` cliente/vendedor ya se deriva de los roles de la sesión. |
 | `src/hooks/useViewNavigate.ts` | Traduce el `setView("catalog")` del export a rutas reales. Se elimina cuando todas las pantallas usen `<Link>` / `useNavigate`. |
-| Guards de ruta | `ProtectedRoute` y `RoleRoute` están implementados pero **no montados**: hacerlo antes de que el login autentique dejaría el diseño inaccesible. Se activan en el Módulo 1. |
-| Tamaño del bundle | 967 kB en un solo chunk. Se resuelve solo al migrar pantallas a `features/` con rutas `lazy`. |
+| Selector de rol de la navbar | Atajo de demo del diseño de Figma. Con los guards activos, elegir un rol que no se tiene redirige y avisa. Queda por decidir si se retira al cerrar la integración. |
+| Pantalla "Mi cuenta" | La integró el diseño con datos de ejemplo ("María González"). El perfil real depende de un módulo de Usuarios que no existe (ver sección 3). |
+| Jerarquía de roles | Cada ruta de administración exige exactamente su rol: el backend no define ninguna jerarquía, así que un `SUPER_ADMIN` no entra a `/admin/local` salvo que también tenga ese rol. Confirmar si es lo deseado. |
 | Dependencias sin uso | El export arrastra `canvas-confetti`, `motion`, `react-dnd`, `react-dnd-html5-backend`, `react-slick`, `react-responsive-masonry`, `react-popper` y `@popperjs/core`, que no se importan en ningún archivo. Se conservaron para no salirse del alcance acordado; conviene decidir si se eliminan. |

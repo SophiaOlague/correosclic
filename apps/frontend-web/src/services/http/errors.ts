@@ -61,6 +61,12 @@ export class NetworkError extends Error {
 export function toApiError(status: number, body: unknown): ApiError {
   const parsed = (body ?? {}) as NestErrorBody;
 
+  // Un 5xx nunca trae un mensaje útil para el usuario: NestJS responde
+  // "Internal server error". Se prefiere el texto propio en español.
+  if (status >= 500) {
+    return new ApiError(status, [defaultMessageFor(status)], parsed.error);
+  }
+
   const messages = Array.isArray(parsed.message)
     ? parsed.message
     : parsed.message
@@ -82,6 +88,8 @@ function defaultMessageFor(status: number): string {
       return 'No encontramos lo que buscas.';
     case 409:
       return 'La operación entra en conflicto con el estado actual.';
+    case 500:
+      return 'El servidor no pudo completar la operación. Inténtalo de nuevo.';
     default:
       return 'Ocurrió un error inesperado. Inténtalo de nuevo.';
   }

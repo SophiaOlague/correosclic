@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router';
 
+import { PageLoader } from '@/components/common/PageLoader';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { SessionExpiryWatcher } from '@/providers/SessionExpiryWatcher';
 
 import { Footer } from './Footer';
 import { Navbar } from './Navbar';
@@ -45,12 +47,16 @@ export function RootLayout() {
     >
       <style>{`#cc-root::-webkit-scrollbar{display:none;} .scrollbar-hide::-webkit-scrollbar{display:none;} .scrollbar-hide{scrollbar-width:none;}`}</style>
 
+      <SessionExpiryWatcher />
+
       <Navbar scrolled={scrolled} />
 
       {/* Espaciador de la navbar fija (anuncio + nav principal + categorías ≈ 136px) */}
       <div className="h-[136px]" />
 
-      <Outlet />
+      <Suspense fallback={<PageLoader />}>
+        <Outlet />
+      </Suspense>
 
       <Footer />
     </div>

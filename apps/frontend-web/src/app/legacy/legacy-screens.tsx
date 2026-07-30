@@ -55,14 +55,6 @@ export function TrackingScreen() {
   );
 }
 
-export function LoginScreen() {
-  return <Figma.Login setView={useViewNavigate()} />;
-}
-
-export function RegisterScreen() {
-  return <Figma.Register setView={useViewNavigate()} />;
-}
-
 /**
  * En el export, `/mi-cuenta` alternaba entre el panel de cliente y el de
  * vendedor con un estado local `mode`. Se conserva ese comportamiento hasta que

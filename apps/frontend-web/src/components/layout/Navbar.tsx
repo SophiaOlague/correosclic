@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { Bell, ChevronDown, ChevronRight, Search, ShoppingCart, User } from 'lucide-react';
+import { Bell, ChevronDown, ChevronRight, Search, ShoppingCart } from 'lucide-react';
 
 import { useViewNavigate } from '@/hooks/useViewNavigate';
+
+import { AccountMenu } from './AccountMenu';
 
 /**
  * Barra superior del sitio. El markup se extrajo sin cambios del export de
@@ -88,10 +90,7 @@ export function Navbar({ scrolled }: { scrolled: boolean }) {
                 <ChevronDown className="w-3 h-3" />
               </div>
             </div>
-            <button onClick={() => setView("dashboard")} className="hidden md:flex items-center gap-2 px-3 h-10 rounded-xl hover:bg-[#F5F6F8] transition-colors text-sm text-foreground">
-              <User className="w-4 h-4 text-muted-foreground" />
-              <span className="hidden lg:block">Mi cuenta</span>
-            </button>
+            <AccountMenu />
             <button className="relative w-10 h-10 flex items-center justify-center rounded-xl hover:bg-[#F5F6F8] transition-colors">
               <Bell className="w-5 h-5 text-muted-foreground" />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-primary rounded-full" />
