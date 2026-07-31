@@ -15,14 +15,6 @@ import { useLegacyUiState } from './LegacyUiStateProvider';
  * la API; todas siguen mostrando los datos de ejemplo del diseño.
  */
 
-export function CheckoutScreen() {
-  return (
-    <main>
-      <Figma.Checkout setView={useViewNavigate()} />
-    </main>
-  );
-}
-
 export function TrackingScreen() {
   return (
     <main>

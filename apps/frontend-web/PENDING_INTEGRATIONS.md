@@ -3,7 +3,7 @@
 Registro de las pantallas cuyo backend todavía no existe y de los contratos que
 harían falta para conectarlas. Se actualiza al cerrar cada módulo.
 
-**Última actualización:** 2026-07-31 (cierre del Módulo 3 — Carrito)
+**Última actualización:** 2026-07-31 (cierre del Módulo 4 — Checkout)
 
 > **Carrito integrado.** `/cart` es el primer módulo enteramente conectado a la
 > API. Para que el flujo funcione de punta a punta pese a que el catálogo sigue
@@ -138,16 +138,50 @@ componentes, ni los hooks, ni los tipos cambian.
 Solo existe lectura: `GET /api/checkout/addresses` → `CheckoutAddressDto[]`
 (`id`, `alias`, `direccionFormateada`, `esPrincipal`).
 
-`POST /api/orders` requiere un `direccionId`, así que un usuario **sin ninguna
-dirección registrada no puede completar una compra** desde el frontend.
+**Es el hueco más visible del Módulo 4.** El diseño de Figma traía un formulario
+editable en el paso "Dirección" (nombre, apellidos, calle, colonia, código
+postal, ciudad), pero no hay dónde guardarlo, y `CheckoutAddressDto` ni siquiera
+devuelve los campos por separado: llegan compuestos en `direccionFormateada`.
+El formulario se sustituyó por un **selector** de las direcciones existentes.
+
+Un cliente recién registrado **no tiene ninguna dirección**, así que
+`GET /api/checkout` le responde `400 El cliente no tiene una dirección de
+entrega principal registrada.` y no puede comprar. Verificado en el navegador.
 
 | Endpoint esperado | Body esperado |
 | --- | --- |
 | `POST /api/addresses` | `calle`, `numeroExterior`, `numeroInterior?`, `colonia?`, `ciudad`, `estadoProvincia`, `codigoPostal`, `alias?`, `esPrincipal?` — campos tomados de `OrderDeliveryAddressDto` |
 | `PATCH /api/addresses/:id` | mismos campos, todos opcionales |
 | `DELETE /api/addresses/:id` | — |
+| `GET /api/addresses/:id` | los campos por separado, para poder editarlos |
 
 **Dependencias de backend:** módulo de Direcciones (no existe como módulo HTTP).
+Ojo: `GET /checkout` exige que el código postal tenga coordenadas (`latitud`,
+`longitud`) para cotizar el envío, así que el alta de direcciones tendrá que
+resolverlas.
+
+---
+
+## 2b. Checkout — diferencias entre el diseño y el contrato
+
+`GET /checkout` y `GET /checkout/addresses` quedaron integrados. Estas piezas
+del diseño **no tienen respaldo** y se resolvieron como se indica:
+
+| Elemento del diseño | Realidad del contrato | Resolución |
+| --- | --- | --- |
+| Formulario de dirección editable | No hay CRUD de direcciones | Selector de las existentes (ver sección 2) |
+| Paso "Envío" con opciones Express $99 / Estándar gratis | El backend **no ofrece elegir método de envío**: lo cotiza por vendedor a partir de dirección, peso y distancia | El paso muestra el desglose real por vendedor, sin opciones que elegir |
+| "Llega mañana antes de las 21:00" | Checkout no devuelve fechas de entrega | Eliminado: no se inventan fechas |
+| Pasos "Pago" y "Confirmación" | Pertenecen a `POST /orders` y `POST /payments/intent` | Se conservan en el indicador, atenuados; el botón final está deshabilitado |
+| "Impuestos estim. (16%)" sumado al total | `ivaIncluido` ya está **dentro** de `total` | Se muestra como "IVA incluido: $X", no como suma |
+| `comisionMarketplace` | Informativa: es lo que CorreosClic descuenta a los **vendedores**, no la paga el cliente | **No se muestra** en el resumen de compra, para no dar a entender que la paga el comprador |
+
+**Regla multivendedor.** `HighestPlusPartialShippingAggregationStrategy` cobra
+completa la tarifa más alta (`esTarifaBase: true`) y de cada vendedor adicional
+solo una fracción (`recargoAplicado`). Por eso **la suma de `envioDetalle[].tarifa`
+no es igual a `shipping`**. La interfaz muestra el importe realmente aplicado y
+explica la tarifa individual aparte; mostrar solo `tarifa` haría que las cifras
+no cuadraran.
 
 ---
 
