@@ -15,30 +15,6 @@ import { useLegacyUiState } from './LegacyUiStateProvider';
  * la API; todas siguen mostrando los datos de ejemplo del diseño.
  */
 
-export function HomeScreen() {
-  return <Figma.LegacyHome setView={useViewNavigate()} />;
-}
-
-export function ProductDetailScreen() {
-  return <Figma.LegacyProductDetailPage setView={useViewNavigate()} />;
-}
-
-export function CatalogScreen() {
-  return (
-    <main>
-      <Figma.Catalog setView={useViewNavigate()} />
-    </main>
-  );
-}
-
-export function CartScreen() {
-  return (
-    <main>
-      <Figma.Cart setView={useViewNavigate()} />
-    </main>
-  );
-}
-
 export function CheckoutScreen() {
   return (
     <main>

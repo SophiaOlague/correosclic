@@ -28,11 +28,15 @@ const lazyLegacy = <K extends keyof typeof import('./legacy/legacy-screens')>(na
 const LoginPage = lazy(() => import('@/features/auth/pages/LoginPage'));
 const RegisterPage = lazy(() => import('@/features/auth/pages/RegisterPage'));
 
+/* Módulo 2 — Catálogo y Producto (datos mock tras `catalog.api.ts`) */
+const HomePage = lazy(() => import('@/features/catalog/pages/HomePage'));
+const CatalogPage = lazy(() => import('@/features/catalog/pages/CatalogPage'));
+const ProductDetailPage = lazy(() => import('@/features/products/pages/ProductDetailPage'));
+
+/* Módulo 3 — Carrito (integrado contra `/cart`) */
+const CartPage = lazy(() => import('@/features/cart/pages/CartPage'));
+
 /* Pendientes de migración */
-const HomeScreen = lazyLegacy('HomeScreen');
-const CatalogScreen = lazyLegacy('CatalogScreen');
-const ProductDetailScreen = lazyLegacy('ProductDetailScreen');
-const CartScreen = lazyLegacy('CartScreen');
 const CheckoutScreen = lazyLegacy('CheckoutScreen');
 const AccountScreen = lazyLegacy('AccountScreen');
 const TrackingScreen = lazyLegacy('TrackingScreen');
@@ -50,9 +54,9 @@ export const router = createBrowserRouter([
     element: <RootLayout />,
     children: [
       /* Públicas */
-      { index: true, element: <HomeScreen /> },
-      { path: ROUTES.catalog, element: <CatalogScreen />, handle: { title: 'Catálogo' } },
-      { path: ROUTES.product, element: <ProductDetailScreen />, handle: { title: 'Producto' } },
+      { index: true, element: <HomePage /> },
+      { path: ROUTES.catalog, element: <CatalogPage />, handle: { title: 'Catálogo' } },
+      { path: `${ROUTES.product}/:id`, element: <ProductDetailPage />, handle: { title: 'Producto' } },
 
       /* Solo para visitantes: con sesión iniciada redirigen al panel por rol. */
       {
@@ -67,7 +71,7 @@ export const router = createBrowserRouter([
       {
         element: <ProtectedRoute />,
         children: [
-          { path: ROUTES.cart, element: <CartScreen />, handle: { title: 'Carrito' } },
+          { path: ROUTES.cart, element: <CartPage />, handle: { title: 'Carrito' } },
           { path: ROUTES.checkout, element: <CheckoutScreen />, handle: { title: 'Finalizar compra' } },
           { path: ROUTES.account, element: <AccountScreen />, handle: { title: 'Mi cuenta' } },
           { path: ROUTES.tracking, element: <TrackingScreen />, handle: { title: 'Rastrear pedido' } },

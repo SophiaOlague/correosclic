@@ -18,7 +18,9 @@ const VIEW_TO_ROUTE: Record<string, string> = {
   login: ROUTES.login,
   register: ROUTES.register,
   catalog: ROUTES.catalog,
-  product: ROUTES.product,
+  // El detalle de producto ya vive en `/producto/:id`: sin un id concreto, lo
+  // sensato es llevar al catálogo.
+  product: ROUTES.catalog,
   cart: ROUTES.cart,
   checkout: ROUTES.checkout,
   dashboard: ROUTES.account,
@@ -37,8 +39,7 @@ export function useViewNavigate(): (view: string) => void {
 
   return useCallback(
     (view: string) => {
-      // En el export, cualquier vista desconocida caía en el detalle de producto.
-      navigate(VIEW_TO_ROUTE[view] ?? ROUTES.product);
+      navigate(VIEW_TO_ROUTE[view] ?? ROUTES.catalog);
     },
     [navigate],
   );

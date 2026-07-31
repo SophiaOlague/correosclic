@@ -3,7 +3,14 @@
 Registro de las pantallas cuyo backend todavía no existe y de los contratos que
 harían falta para conectarlas. Se actualiza al cerrar cada módulo.
 
-**Última actualización:** 2026-07-30 (cierre del Módulo 1 — Auth)
+**Última actualización:** 2026-07-31 (cierre del Módulo 3 — Carrito)
+
+> **Carrito integrado.** `/cart` es el primer módulo enteramente conectado a la
+> API. Para que el flujo funcione de punta a punta pese a que el catálogo sigue
+> siendo local, `src/mocks/catalog.mock.ts` se regeneró **volcando la base de
+> datos sembrada**: cada `variantes[].id` del mock es un `productoVarianteId`
+> real, así que `POST /cart/items` lo acepta. Al conectar los GET de catálogo,
+> el mock desaparece sin tocar nada más.
 
 > El inventario de endpoints **reales** del backend se levantó leyendo los
 > controladores de `apps/backend/src`. Ninguna pantalla debe llamar a un
@@ -44,7 +51,7 @@ enseñar "Internal server error" al usuario.
 
 ## 1. Catálogo público (bloquea el embudo de compra)
 
-**Pantallas afectadas:** Home (`/`), Catálogo (`/catalogo`), Detalle de producto (`/producto`).
+**Pantallas afectadas:** Home (`/`), Catálogo (`/catalogo`), Detalle de producto (`/producto/:id`).
 
 El módulo `catalog` del backend es **solo de escritura para el vendedor**
 (`POST /api/seller/products` y derivados). No expone ninguna lectura pública:
@@ -55,19 +62,72 @@ vacíos, y `category.controller.ts` solo tiene `POST`.
 (UUID). Sin lectura de catálogo no hay forma de obtenerlo desde la interfaz, así
 que el carrito se puede integrar pero **no se puede llenar** desde la UI.
 
-| Endpoint esperado | Respuesta esperada | Notas |
+### Endpoints faltantes
+
+| Endpoint esperado | Respuesta | Query |
 | --- | --- | --- |
-| `GET /api/catalog/products` | `{ products: ProductListItemDto[], page, limit, total, totalPages }` | Filtros por categoría, texto, rango de precio y orden. Paginación igual a `OrderListQueryDto` (`page`, `limit ≤ 100`). |
-| `GET /api/catalog/products/:id` | `ProductDetailDto` con `variantes[]` (cada una con `id`, `sku`, `precio`, `stockDisponible`, `atributos[]`) e `imagenes[]` | El `id` de variante es lo que consume el carrito. |
-| `GET /api/catalog/categories` | `CategoryDto[]` (árbol o plano con `parentId`) | Hoy solo existe `POST /api/catalog/categories`. |
+| `GET /api/catalog/products` | `ProductListResponse` | `page`, `limit`, `search`, `categoriaId`, `precioMin`, `precioMax`, `soloOfertas`, `orden` |
+| `GET /api/catalog/products/:id` | `ProductDetailDto` | — (404 si no existe o no está publicado) |
+| `GET /api/catalog/categories` | `CategoryDto[]` | — |
 
-**Dependencias de backend:** módulo `catalog` (entidades `Producto`,
-`ProductoVariante`, `Inventario`, `ProductoImagen`, `Categoria` ya existen en
-Prisma; falta la capa de lectura).
+Los tres deberían ser **públicos** (sin `JwtAuthGuard`) y devolver solo
+productos con `activo = true` y `publicado = true`.
 
-**Estado en el frontend:** pendiente. Se resolverá en el **Módulo 2** con datos
-mock tipados detrás de `services/api/catalog.api.ts`, de modo que conectar el
-backend real consista en cambiar el cuerpo de tres funciones.
+### DTOs esperados
+
+Definidos ya en [`src/types/catalog.ts`](src/types/catalog.ts), modelados sobre
+el esquema de Prisma. Resumen:
+
+```ts
+CategoryDto        { id, parentId, nombre, slug, descripcion, productCount }
+ProductImageDto    { id, url, orden, esPrincipal }
+ProductVariantDto  { id, sku, precio, pesoKg, activa, stockDisponible,
+                     atributos: { atributo, valor }[] }
+ProductStoreDto    { id, vendedorId, codigoPublico, nombre, logoUrl }
+
+ProductListItemDto { id, codigoPublico, nombre, categoriaId, tienda,
+                     imagenPrincipalUrl, precioDesde, stockTotal, ...campos de diseño }
+
+ProductDetailDto   extends ProductListItemDto
+                   + { descripcion, pesoKg, altoCm, anchoCm, largoCm,
+                       categoria, imagenes[], variantes[] }
+
+ProductListResponse { products, page, limit, total, totalPages }
+```
+
+`precioDesde` es `min(variantes.precio)` y `stockTotal` la suma del
+`Inventario.stockDisponible` de las variantes activas. La paginación sigue la
+forma de `OrderListResponseDto`, que ya existe en Orders.
+
+### Campos del diseño sin respaldo en el esquema
+
+El diseño de Figma muestra datos que **Prisma no modela**. Están declarados como
+opcionales en `ProductListItemDto` para que la interfaz degrade sin romperse:
+
+| Campo | Qué haría falta |
+| --- | --- |
+| `precioAnterior`, `etiqueta` | Un modelo de promociones/descuentos |
+| `calificacion`, `totalOpiniones` | Un modelo de opiniones (`Resena`) |
+| `unidadesVendidas` | Un agregado sobre `PedidoItem` |
+| `envioGratis` | Hoy el envío lo cotiza `GET /checkout` por vendedor y dirección, no por producto |
+
+En la misma línea, los bloques de filtro **Calificación** y **Condición** se
+conservan visualmente pero aparecen deshabilitados con la etiqueta
+"Próximamente", y las pestañas de **Opiniones** y **Preguntas y Respuestas** del
+detalle se sirven desde `catalogApi.listReviews` / `listQuestions`, que hoy
+devuelven ejemplos.
+
+### Estado en el frontend
+
+✅ **Módulo 2 cerrado.** Home, Catálogo y Detalle están migrados a `features/`
+con toda la interfaz real —filtros, orden, paginación, búsqueda, selector de
+variante con stock, estados de carga, vacío y error—, alimentada por
+[`services/api/catalog.api.ts`](src/services/api/catalog.api.ts).
+
+**Para conectar el backend real basta con sustituir el cuerpo de tres funciones**
+de ese archivo por la llamada `http.get(...)` que ya está escrita en el
+comentario de cada una, y borrar `src/mocks/catalog.mock.ts`. Ni los
+componentes, ni los hooks, ni los tipos cambian.
 
 ---
 
@@ -158,7 +218,11 @@ representen quedan con mock y navegación funcional.
 
 | Punto | Detalle |
 | --- | --- |
-| `src/app/legacy/FigmaExport.tsx` | Las 13 pantallas restantes del export siguen en un solo archivo (4 604 líneas). Cada módulo extrae las suyas a `features/`. El archivo desaparece al terminar el Módulo 9. |
+| `src/app/legacy/FigmaExport.tsx` | Las 10 pantallas restantes del export siguen en un solo archivo (3 348 líneas). Cada módulo extrae las suyas a `features/`. El archivo desaparece al terminar el Módulo 9. |
+| Cupones de descuento | El campo del carrito es del diseño; no hay modelo ni endpoint de cupones. Avisa "próximamente". |
+| IVA en el carrito | `ShoppingCartDto` no incluye el desglose de IVA (`GET /checkout` sí lo manda en `ivaIncluido`, leyendo `IVA_PERCENTAGE` de la configuración del sistema). Por eso el resumen del carrito indica "IVA incluido" sin cifra y el envío se muestra como "Se calcula en el siguiente paso". |
+| Favoritos | El corazón de la tarjeta de producto y del detalle es solo visual: no existe modelo ni endpoint de favoritos. |
+| Tiendas destacadas | `Tienda` existe en Prisma pero no hay endpoint de lectura; la portada usa contenido estático de `features/catalog/lib/home-content.ts`. |
 | `src/app/legacy/LegacyUiStateProvider.tsx` | Sostiene `sellerStatus`, que dará el onboarding real (Módulo 8). El `mode` cliente/vendedor ya se deriva de los roles de la sesión. |
 | `src/hooks/useViewNavigate.ts` | Traduce el `setView("catalog")` del export a rutas reales. Se elimina cuando todas las pantallas usen `<Link>` / `useNavigate`. |
 | Selector de rol de la navbar | Atajo de demo del diseño de Figma. Con los guards activos, elegir un rol que no se tiene redirige y avisa. Queda por decidir si se retira al cerrar la integración. |
