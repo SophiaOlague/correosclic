@@ -10,23 +10,26 @@ import { AddressSelector } from '../components/AddressSelector';
 import { CheckoutStepper } from '../components/CheckoutStepper';
 import { CheckoutSummary } from '../components/CheckoutSummary';
 import { VendorShipmentGroup } from '../components/VendorShipmentGroup';
+import { useCreateOrder } from '@/features/orders/hooks/useOrders';
+
 import { useCheckoutAddresses, useCheckoutSummary, useVendorGroups } from '../hooks/useCheckout';
 
 /**
  * Finalizar compra.
  *
- * Consume únicamente `GET /checkout` y `GET /checkout/addresses`: es una
- * pantalla de lectura. Al elegir otra dirección cambia la clave de la consulta
- * y el backend recotiza el envío; el frontend no recalcula ningún importe.
+ * Lee de `GET /checkout` y `GET /checkout/addresses`. Al elegir otra dirección
+ * cambia la clave de la consulta y el backend recotiza el envío; el frontend no
+ * recalcula ningún importe.
  *
- * El flujo termina aquí a propósito. Crear el pedido y cobrar pertenecen a los
- * módulos siguientes.
+ * Al confirmar se llama a `POST /orders`, que vuelve a ejecutar Checkout en el
+ * servidor antes de crear nada: el cliente solo manda el `direccionId`.
  */
 export default function CheckoutPage() {
   const [direccionId, setDireccionId] = useState<string | undefined>(undefined);
 
   const addressesQuery = useCheckoutAddresses();
   const summaryQuery = useCheckoutSummary(direccionId);
+  const createOrder = useCreateOrder();
 
   const summary = summaryQuery.data;
   const vendorGroups = useVendorGroups(summary);
@@ -34,6 +37,22 @@ export default function CheckoutPage() {
   // Mientras no se elija nada, la seleccionada es la que el backend usó.
   const seleccionada = direccionId ?? summary?.direccionId;
   const isRecalculating = summaryQuery.isFetching && !summaryQuery.isLoading;
+
+  /**
+   * Ámbito de la clave de idempotencia.
+   *
+   * El interceptor del backend calcula una huella del body, así que la
+   * dirección forma parte del ámbito: cambiarla genera una clave nueva y evita
+   * el 422 de "clave ya usada con otra solicitud". La clave se libera al crear
+   * el pedido, de modo que la siguiente compra empiece con una limpia.
+   */
+  const idempotencyScope = `order:${seleccionada ?? 'principal'}`;
+
+  const confirmarPedido = () => {
+    if (createOrder.isPending) return;
+
+    createOrder.mutate({ scope: idempotencyScope, direccionId: seleccionada });
+  };
 
   if (summaryQuery.isLoading) return <CheckoutSkeleton />;
 
@@ -97,7 +116,7 @@ export default function CheckoutPage() {
               selectedId={seleccionada}
               onSelect={setDireccionId}
               isLoading={addressesQuery.isLoading}
-              isRecalculating={isRecalculating}
+              isRecalculating={isRecalculating || createOrder.isPending}
             />
 
             <div>
@@ -123,7 +142,12 @@ export default function CheckoutPage() {
           </div>
 
           <div className="w-full lg:w-[380px] shrink-0">
-            <CheckoutSummary summary={summary} isRecalculating={isRecalculating} />
+            <CheckoutSummary
+              summary={summary}
+              isRecalculating={isRecalculating}
+              onConfirm={confirmarPedido}
+              isCreatingOrder={createOrder.isPending}
+            />
           </div>
         </div>
       </div>

@@ -17,10 +17,17 @@ import { formatMoney } from '@/utils/format';
 export function CheckoutSummary({
   summary,
   isRecalculating,
+  onConfirm,
+  isCreatingOrder,
 }: {
   summary: CheckoutSummaryDto;
   isRecalculating: boolean;
+  onConfirm: () => void;
+  isCreatingOrder: boolean;
 }) {
+  // Se bloquea mientras se recotiza, mientras el pedido está en vuelo y si el
+  // backend dice que no se puede continuar.
+  const bloqueado = isRecalculating || isCreatingOrder || !summary.canCheckout;
   return (
     <div className="bg-white rounded-2xl border border-border p-6 shadow-sm sticky top-[136px]">
       <div className="flex items-center justify-between mb-5">
@@ -70,19 +77,27 @@ export function CheckoutSummary({
         </div>
       </div>
 
-      {/* TODO: Módulo 5 — POST /orders. Checkout es solo de lectura. */}
       <button
         type="button"
-        disabled
-        title="La creación del pedido y el pago llegan en los siguientes módulos"
-        className="w-full bg-primary text-white h-14 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-primary/25 mb-4 disabled:opacity-50 disabled:cursor-not-allowed"
+        onClick={onConfirm}
+        disabled={bloqueado}
+        className="w-full bg-primary text-white h-14 rounded-xl font-bold hover:bg-[#C4006A] transition-colors flex items-center justify-center gap-2 shadow-lg shadow-primary/25 mb-4 disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        <Lock className="w-4 h-4" />
-        Continuar al pago
+        {isCreatingOrder ? (
+          <>
+            <Loader2 className="w-5 h-5 animate-spin" />
+            Creando tu pedido...
+          </>
+        ) : (
+          <>
+            <Lock className="w-4 h-4" />
+            Confirmar pedido
+          </>
+        )}
       </button>
 
       <p className="text-xs text-center text-muted-foreground mb-4">
-        La confirmación del pedido y el pago se habilitan en el siguiente módulo.
+        Al confirmar se reserva el inventario y tu pedido queda pendiente de pago.
       </p>
 
       <div className="flex items-center gap-2 text-xs text-muted-foreground bg-[#006847]/5 p-3 rounded-xl border border-[#006847]/10">

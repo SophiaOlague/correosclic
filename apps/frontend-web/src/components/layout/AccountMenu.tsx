@@ -1,4 +1,4 @@
-import { LogOut, User } from 'lucide-react';
+import { LogOut, Package, User } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
 
@@ -62,7 +62,10 @@ export function AccountMenu() {
           Mi cuenta
         </DropdownMenuItem>
 
-        {/* TODO: "Mis pedidos" se añade aquí en el Módulo 5, cuando exista la ruta. */}
+        <DropdownMenuItem onSelect={() => navigate(ROUTES.orders)}>
+          <Package className="w-4 h-4 text-muted-foreground" />
+          Mis pedidos
+        </DropdownMenuItem>
 
         <DropdownMenuSeparator />
 

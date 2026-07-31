@@ -10,6 +10,11 @@ interface NestErrorBody {
   statusCode?: number;
   message?: string | string[];
   error?: string;
+  /**
+   * Detalle extra que añaden algunas excepciones de dominio. Por ejemplo
+   * `OrderStockConflictException` responde 409 con el motivo por producto.
+   */
+  warnings?: string[];
 }
 
 export class ApiError extends Error {
@@ -18,13 +23,16 @@ export class ApiError extends Error {
   readonly messages: string[];
   /** Etiqueta corta de NestJS: `Bad Request`, `Unauthorized`, ... */
   readonly error?: string;
+  /** Detalle por elemento cuando la excepción lo incluye. */
+  readonly warnings: string[];
 
-  constructor(status: number, messages: string[], error?: string) {
+  constructor(status: number, messages: string[], error?: string, warnings: string[] = []) {
     super(messages[0] ?? 'Ocurrió un error inesperado.');
     this.name = 'ApiError';
     this.status = status;
     this.messages = messages;
     this.error = error;
+    this.warnings = warnings;
   }
 
   get isUnauthorized(): boolean {
@@ -73,7 +81,12 @@ export function toApiError(status: number, body: unknown): ApiError {
       ? [parsed.message]
       : [defaultMessageFor(status)];
 
-  return new ApiError(status, messages, parsed.error);
+  return new ApiError(
+    status,
+    messages,
+    parsed.error,
+    Array.isArray(parsed.warnings) ? parsed.warnings : [],
+  );
 }
 
 function defaultMessageFor(status: number): string {

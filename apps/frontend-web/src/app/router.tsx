@@ -39,6 +39,10 @@ const CartPage = lazy(() => import('@/features/cart/pages/CartPage'));
 /* Módulo 4 — Checkout (integrado contra `/checkout`) */
 const CheckoutPage = lazy(() => import('@/features/checkout/pages/CheckoutPage'));
 
+/* Módulo 5 — Orders (integrado contra `/orders`) */
+const OrdersPage = lazy(() => import('@/features/orders/pages/OrdersPage'));
+const OrderDetailPage = lazy(() => import('@/features/orders/pages/OrderDetailPage'));
+
 /* Pendientes de migración */
 const AccountScreen = lazyLegacy('AccountScreen');
 const TrackingScreen = lazyLegacy('TrackingScreen');
@@ -76,6 +80,8 @@ export const router = createBrowserRouter([
           { path: ROUTES.cart, element: <CartPage />, handle: { title: 'Carrito' } },
           { path: ROUTES.checkout, element: <CheckoutPage />, handle: { title: 'Finalizar compra' } },
           { path: ROUTES.account, element: <AccountScreen />, handle: { title: 'Mi cuenta' } },
+          { path: ROUTES.orders, element: <OrdersPage />, handle: { title: 'Mis pedidos' } },
+          { path: `${ROUTES.orders}/:id`, element: <OrderDetailPage />, handle: { title: 'Detalle del pedido' } },
           { path: ROUTES.tracking, element: <TrackingScreen />, handle: { title: 'Rastrear pedido' } },
           { path: ROUTES.becomeSeller, element: <BecomeSellerScreen />, handle: { title: 'Vender' } },
         ],
