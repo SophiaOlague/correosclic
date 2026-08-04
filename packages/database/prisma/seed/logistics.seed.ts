@@ -100,7 +100,7 @@ export async function seedLogistics(prisma: PrismaClient) {
 
   const passwordHash = await bcrypt.hash(PASSWORD, 12);
 
-  const empleadoRecepcionDurango = await seedEmpleado(prisma, {
+  await seedEmpleado(prisma, {
     email: 'recepcionista.durango@correosclic.mx',
     nombre: 'Rosa',
     apellidoPaterno: 'Domínguez',
@@ -108,9 +108,10 @@ export async function seedLogistics(prisma: PrismaClient) {
     puesto: 'Recepcionista',
     sucursalId: sucursalDurango.id,
     passwordHash,
+    rolCodigo: 'RECEPCION',
   });
 
-  const empleadoRecepcionGdl = await seedEmpleado(prisma, {
+  await seedEmpleado(prisma, {
     email: 'recepcionista.guadalajara@correosclic.mx',
     nombre: 'Luis',
     apellidoPaterno: 'Padilla',
@@ -118,6 +119,7 @@ export async function seedLogistics(prisma: PrismaClient) {
     puesto: 'Recepcionista',
     sucursalId: sucursalGuadalajara.id,
     passwordHash,
+    rolCodigo: 'RECEPCION',
   });
 
   const empleadoRepartidor = await seedEmpleado(prisma, {
@@ -128,6 +130,7 @@ export async function seedLogistics(prisma: PrismaClient) {
     puesto: 'Repartidor',
     sucursalId: sucursalDurango.id,
     passwordHash,
+    rolCodigo: 'REPARTIDOR',
   });
 
   const repartidor = await prisma.repartidor.upsert({
@@ -164,7 +167,9 @@ export async function seedLogistics(prisma: PrismaClient) {
     });
   }
 
-  console.log('   ✅ 2 sucursales, 3 empleados, 1 repartidor, 2 vehículos');
+  console.log(
+    '   ✅ 2 sucursales, 3 empleados (2 RECEPCION, 1 REPARTIDOR), 1 repartidor, 2 vehículos',
+  );
 }
 
 async function seedEmpleado(
@@ -177,6 +182,8 @@ async function seedEmpleado(
     puesto: string;
     sucursalId: string;
     passwordHash: string;
+    /** Código de `Rol` que habilita el panel correspondiente en el frontend. */
+    rolCodigo: string;
   },
 ) {
   const usuario = await prisma.usuario.upsert({
@@ -196,6 +203,23 @@ async function seedEmpleado(
       activo: true,
     },
   });
+
+  // Los endpoints de Logistics validan contra Empleado y Repartidor, no contra
+  // roles, así que sin esto la API funcionaba pero los guards del frontend
+  // dejaban al recepcionista y al repartidor fuera de su propio panel.
+  const rol = await prisma.rol.findUniqueOrThrow({
+    where: { codigo: data.rolCodigo },
+  });
+
+  const rolAsignado = await prisma.usuarioRol.findFirst({
+    where: { usuarioId: usuario.id, rolId: rol.id },
+  });
+
+  if (!rolAsignado) {
+    await prisma.usuarioRol.create({
+      data: { usuarioId: usuario.id, rolId: rol.id },
+    });
+  }
 
   return prisma.empleado.upsert({
     where: { usuarioId: usuario.id },
