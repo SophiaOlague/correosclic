@@ -36,6 +36,31 @@ export class SellerOnboardingRepository {
     });
   }
 
+  /**
+   * Solicitud vigente del cliente: la más reciente.
+   *
+   * Tras un rechazo el cliente puede volver a solicitar, así que puede haber
+   * varias; la que importa para reanudar el proceso es siempre la última.
+   */
+  async findLatestRequestByClientId(clienteId: string) {
+    return this.prisma.solicitudVendedor.findFirst({
+      where: {
+        clienteId,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      include: {
+        informacionFiscal: true,
+        documentos: {
+          orderBy: {
+            createdAt: 'asc',
+          },
+        },
+      },
+    });
+  }
+
   async findRequestById(id: string) {
     return this.prisma.solicitudVendedor.findUnique({
       where: {
