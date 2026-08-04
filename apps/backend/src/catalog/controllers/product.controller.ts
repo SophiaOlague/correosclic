@@ -1,13 +1,14 @@
 import {
   Body,
   Controller,
+  Get,
   Post,
+  Query,
   UseGuards,
   Param,
   Patch,
   UploadedFile,
   UseInterceptors,
-  BadRequestException,
   ParseFilePipe,
   FileTypeValidator,
   MaxFileSizeValidator,
@@ -27,9 +28,7 @@ import { InventoryService } from '../application/services/inventory.service';
 import { CreateInventoryDto } from '../application/dto/create-inventory.dto';
 
 import { UpdateInventoryDto } from '../application/dto/update-inventory.dto';
-import { ReserveInventoryDto } from '../application/dto/reserve-inventory.dto';
-import { ReleaseInventoryDto } from '../application/dto/release-inventory.dto';
-import { ConfirmInventoryDto } from '../application/dto/confirm-inventory.dto';
+import { UpdateProductPublicationDto } from '../application/dto/update-product-publication.dto';
 import { ProductImageService } from '../product-image/services/product-image.service';
 
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -48,6 +47,62 @@ export class ProductController {
   ) {}
 
   
+  /** "Mis productos" — paginado y acotado a la tienda del vendedor. */
+  @Get()
+  findMine(
+    @CurrentUser()
+    user: AuthenticatedUserDto,
+
+    @Query('page')
+    page?: string,
+
+    @Query('limit')
+    limit?: string,
+
+    @Query('search')
+    search?: string,
+  ) {
+    return this.productService.findMine(
+      user.id,
+      Number(page ?? 1),
+      Number(limit ?? 20),
+      search?.trim() || undefined,
+    );
+  }
+
+  @Get(':id')
+  findMineById(
+    @CurrentUser()
+    user: AuthenticatedUserDto,
+
+    @Param('id')
+    productId: string,
+  ) {
+    return this.productService.findMineById(
+      user.id,
+      productId,
+    );
+  }
+
+  /** Publica o retira de publicación. Sin esto un producto nunca podía venderse. */
+  @Patch(':id/publication')
+  updatePublication(
+    @CurrentUser()
+    user: AuthenticatedUserDto,
+
+    @Param('id')
+    productId: string,
+
+    @Body()
+    dto: UpdateProductPublicationDto,
+  ) {
+    return this.productService.updatePublication(
+      user.id,
+      productId,
+      dto.publicado,
+    );
+  }
+
   @Post()
   create(
     @CurrentUser()
@@ -87,6 +142,9 @@ export class ProductController {
 @Post('variants/:id/inventory')
 createInventory(
 
+  @CurrentUser()
+  user: AuthenticatedUserDto,
+
   @Param('id')
   variantId: string,
 
@@ -96,6 +154,7 @@ createInventory(
 ) {
 
   return this.inventoryService.create(
+    user.id,
     variantId,
     dto,
   );
@@ -104,6 +163,9 @@ createInventory(
 //actualizar inventario endpoint
 @Patch('variants/:id/inventory')
 updateInventory(
+
+  @CurrentUser()
+  user: AuthenticatedUserDto,
 
   @Param('id')
   variantId: string,
@@ -114,65 +176,21 @@ updateInventory(
 ) {
 
   return this.inventoryService.update(
+    user.id,
     variantId,
     dto,
   );
 
 }
-//reserve inventory endpoint
-@Post('variants/:id/inventory/reserve')
-reserveInventory(
-
-  @Param('id')
-  variantId: string,
-
-  @Body()
-  dto: ReserveInventoryDto,
-
-) {
-
-  return this.inventoryService.reserve(
-    variantId,
-    dto,
-  );
-
-}
-//release inventory endpoint
-@Post('variants/:id/inventory/release')
-releaseInventory(
-
-  @Param('id')
-  variantId: string,
-
-  @Body()
-  dto: ReleaseInventoryDto,
-
-) {
-
-  return this.inventoryService.release(
-    variantId,
-    dto,
-  );
-
-}
-//confirm inventory endpoint
-@Post('variants/:id/inventory/confirm')
-confirmInventory(
-
-  @Param('id')
-  variantId: string,
-
-  @Body()
-  dto: ConfirmInventoryDto,
-
-) {
-
-  return this.inventoryService.confirm(
-    variantId,
-    dto,
-  );
-
-}
+/*
+ * `reserve`, `release` y `confirm` no se exponen por HTTP.
+ *
+ * Son primitivas internas del ciclo de vida del stock: quien las ejecuta es
+ * Orders, dentro de su propia transacción (`order.repository.ts`), nunca un
+ * cliente HTTP. Publicarlas permitía descuadrar el stock reservado de
+ * cualquier vendedor al margen de un pedido real. Los métodos siguen en
+ * InventoryService por si otro módulo los necesita desde dentro.
+ */
 //upload product image endpoint
 @Post(':productId/images')
 @UseInterceptors(FileInterceptor('file'))

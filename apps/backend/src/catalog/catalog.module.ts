@@ -17,6 +17,7 @@ import { ProductImageController } from './product-image/controllers/product-imag
 import { ProductImageService } from './product-image/services/product-image.service';
 import { ProductImageMapper } from './product-image/mappers/product-image.mapper';
 import { ProductImageRepository } from './product-image/repositories/product-image.repository';
+import { ProductPublicationPolicy } from './domain/services/product-publication.policy';
 import { StorageModule } from '../storage/storage.module';
 
 
@@ -38,6 +39,7 @@ import { StorageModule } from '../storage/storage.module';
     InventoryRepository,
     ProductImageRepository,
     ProductImageMapper,
+    ProductPublicationPolicy,
   ],
   exports: [
     CategoryService,
