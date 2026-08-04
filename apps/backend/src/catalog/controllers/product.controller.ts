@@ -1,4 +1,5 @@
 import {
+  ParseUUIDPipe,
   Body,
   Controller,
   Get,
@@ -75,7 +76,7 @@ export class ProductController {
     @CurrentUser()
     user: AuthenticatedUserDto,
 
-    @Param('id')
+    @Param('id', ParseUUIDPipe)
     productId: string,
   ) {
     return this.productService.findMineById(
@@ -90,7 +91,7 @@ export class ProductController {
     @CurrentUser()
     user: AuthenticatedUserDto,
 
-    @Param('id')
+    @Param('id', ParseUUIDPipe)
     productId: string,
 
     @Body()
@@ -124,7 +125,7 @@ export class ProductController {
     @CurrentUser()
     user: AuthenticatedUserDto,
 
-    @Param('id')
+    @Param('id', ParseUUIDPipe)
     productId: string,
 
     @Body()
@@ -145,7 +146,7 @@ createInventory(
   @CurrentUser()
   user: AuthenticatedUserDto,
 
-  @Param('id')
+  @Param('id', ParseUUIDPipe)
   variantId: string,
 
   @Body()
@@ -167,7 +168,7 @@ updateInventory(
   @CurrentUser()
   user: AuthenticatedUserDto,
 
-  @Param('id')
+  @Param('id', ParseUUIDPipe)
   variantId: string,
 
   @Body()
@@ -199,7 +200,7 @@ async uploadProductImage(
   @CurrentUser()
   user: AuthenticatedUserDto,
 
-  @Param('productId')
+  @Param('productId', ParseUUIDPipe)
   productId: string,
 
   @UploadedFile(

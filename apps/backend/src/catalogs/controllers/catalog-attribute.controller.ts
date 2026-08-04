@@ -1,4 +1,5 @@
 import {
+  ParseUUIDPipe,
   Controller,
   Get,
   Param,
@@ -20,7 +21,7 @@ export class CatalogAttributeController {
 
   @Get(':id/values')
 findValuesByAttributeId(
-  @Param('id')
+  @Param('id', ParseUUIDPipe)
   attributeId: string,
 ) {
   return this.service.findValuesByAttributeId(

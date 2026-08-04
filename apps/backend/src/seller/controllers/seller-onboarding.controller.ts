@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Param,
+  ParseUUIDPipe,
   Post,
   UseGuards,
   Patch
@@ -61,7 +62,7 @@ export class SellerOnboardingController {
   @Post('requests/:id/fiscal-information')
   addFiscalInformation(
     @CurrentUser() user: AuthenticatedUserDto,
-    @Param('id') requestId: string,
+    @Param('id', ParseUUIDPipe) requestId: string,
     @Body() dto: CreateFiscalInformationDto,
   ) {
     return this.sellerOnboardingService.addFiscalInformation(
@@ -75,7 +76,7 @@ export class SellerOnboardingController {
 @Post('requests/:id/documents')
 addDocument(
   @CurrentUser() user: AuthenticatedUserDto,
-  @Param('id') requestId: string,
+  @Param('id', ParseUUIDPipe) requestId: string,
   @Body() dto: UploadSellerDocumentDto,
 ) {
   return this.sellerOnboardingService.addDocument(
@@ -89,7 +90,7 @@ addDocument(
 @Patch('requests/:id/submit')
 submitRequest(
   @CurrentUser() user: AuthenticatedUserDto,
-  @Param('id') requestId: string,
+  @Param('id', ParseUUIDPipe) requestId: string,
 ) {
   return this.sellerOnboardingService.submitRequest(
     user.id,
