@@ -41,11 +41,12 @@ líneas. Se está migrando módulo a módulo a `features/`.
 | 5 | Orders | ✅ integrado |
 | 6 | Payments | ✅ integrado (Stripe Elements, solo tarjeta) |
 | 7 | Logistics | ✅ integrado (cliente, vendedor, recepción y reparto) |
-| 8 | Seller | ⬜ pendiente — onboarding sí, "mis productos" no existe |
+| 8 | Seller | ✅ integrado (onboarding, tienda y catálogo propio) |
 | 9 | Admin | ⬜ pendiente — casi todo mock, solo hay `seller-requests` |
 
-Quedan **6 pantallas** en `src/app/legacy/FigmaExport.tsx` (1 909 líneas). Ese
-archivo desaparece al terminar el Módulo 9.
+Quedan **4 pantallas** en `src/app/legacy/FigmaExport.tsx` (1 190 líneas): "Mi
+cuenta" y los tres paneles de administración. Ese archivo desaparece al
+terminar el Módulo 9.
 
 **Lee siempre `apps/frontend-web/PENDING_INTEGRATIONS.md`**: es el registro vivo
 de qué falta en el backend, qué DTOs se esperan y qué decisiones se tomaron.
@@ -189,13 +190,26 @@ puesto— pertenece a Logistics y se obtiene con **`GET /logistics/branches/me`*
 no desde la sesión: meterlo en el DTO obligaría a `JwtStrategy` a resolver un
 `Empleado` en cada petición autenticada, también para quien nunca usa Logistics.
 
+## Vendedor: el backend manda el paso
+
+El onboarding no guarda estado local: `GET /seller/requests/me` devuelve
+`pasoActual` y `estado`, y de ahí sale todo lo que se pinta. Por eso el proceso
+se reanuda tras una recarga o desde otro dispositivo.
+
+`REVISION` significa **"el solicitante la envió"**, no "el expediente está
+completo": lo pone únicamente `PATCH /seller/requests/:id/submit`. La cola del
+administrador filtra por ese paso, así que nunca ve solicitudes a medio llenar.
+
+Publicar un producto exige que sea comprable —una variante activa, con
+inventario y con stock— porque el carrito rechaza lo contrario. Es
+`ProductPublicationPolicy` quien lo decide; retirar de publicación no se valida
+nunca.
+
 ## Deuda conocida
 
-- `src/app/legacy/FigmaExport.tsx` — 6 pantallas por extraer
+- `src/app/legacy/FigmaExport.tsx` — 4 pantallas por extraer
 - `src/hooks/useViewNavigate.ts` — puente temporal entre el `setView("x")` del
   export y las rutas reales; desaparece con la última pantalla
-- `src/app/legacy/LegacyUiStateProvider.tsx` — sostiene `sellerStatus`, que
-  dará el onboarding real (Módulo 8)
 - `src/mocks/catalog.mock.ts` — datos volcados de la BD sembrada, con UUIDs
   **reales** para que el carrito funcione. Se borra cuando existan los GET de
   catálogo; solo lo consume `catalog.api.ts`

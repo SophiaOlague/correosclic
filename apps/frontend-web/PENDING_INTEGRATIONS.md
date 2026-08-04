@@ -3,7 +3,7 @@
 Registro de las pantallas cuyo backend todavía no existe y de los contratos que
 harían falta para conectarlas. Se actualiza al cerrar cada módulo.
 
-**Última actualización:** 2026-08-03 (cierre del Módulo 7 — Logistics)
+**Última actualización:** 2026-08-04 (cierre del Módulo 8 — Seller)
 
 > **Carrito integrado.** `/cart` es el primer módulo enteramente conectado a la
 > API. Para que el flujo funcione de punta a punta pese a que el catálogo sigue
@@ -172,6 +172,88 @@ Cuatro commits independientes del frontend, todos aprobados antes de tocar nada:
 
 ---
 
+## 0d. Seller — lo integrado y lo que falta
+
+El dominio Seller era **casi todo escritura**: no existía ni una sola lectura
+del lado del vendedor. Se añadieron cinco, se cerraron cuatro defectos de
+seguridad y se corrigió el significado del paso `REVISION`.
+
+| Pantalla | Ruta | Endpoints |
+| --- | --- | --- |
+| Onboarding (3 pasos) | `/vender` | `GET /seller/requests/me`, `POST /seller/requests`, `.../fiscal-information`, `.../documents`, `PATCH .../submit`, `POST /storage/uploads` |
+| Panel y "Mis productos" | `/vendedor` | `GET /seller/store`, `POST /seller/store`, `GET /seller/products` |
+| Alta de producto | `/vendedor/productos/nuevo` | `GET /catalog/categories`, `POST /seller/products` |
+| Ficha del producto | `/vendedor/productos/:id` | `GET /seller/products/:id`, `POST .../variants`, `POST|PATCH .../variants/:id/inventory`, `POST .../images`, `PATCH .../publication`, `GET /catalog/attributes[/:id/values]` |
+
+### 🔒 Defectos de seguridad corregidos
+
+Cada uno en su propio commit, todos aprobados antes de tocar nada:
+
+1. **IDOR en el onboarding** — `addFiscalInformation`, `addDocument` y
+   `submitRequest` recibían el `requestId` por URL y **no comprobaban
+   propiedad**: cualquier usuario autenticado podía escribir el RFC y la razón
+   social de otra persona, subirle documentos y enviar su solicitud. Ahora se
+   resuelve el `Cliente` del usuario y se responde 404 si no es suya.
+2. **Inventario sin ownership** — los endpoints de `variants/:id/inventory` no
+   validaban nada y `create`/`update` ni siquiera recibían el usuario:
+   cualquiera podía dejar en cero el stock de cualquier vendedor.
+3. **`reserve` / `release` / `confirm` retirados de HTTP** — primitivas
+   internas sin consumidor legítimo (Orders reserva en su propia transacción,
+   `order.repository.ts`). Los métodos siguen en `InventoryService`.
+4. **Admin sin guard de rol** — `admin/seller-requests` solo llevaba
+   `JwtAuthGuard`: cualquiera podía leer la PII de todos los solicitantes y
+   **auto-aprobarse como VENDEDOR**. Se creó la infraestructura que faltaba
+   (`@Roles` + `RolesGuard`) y se restringió a `SUPER_ADMIN`. Es una decisión
+   de menor privilegio: si en el Módulo 9 un `ADMIN_REGIONAL` debe revisar
+   solicitudes, se amplía el decorador entonces.
+5. **`POST /storage/test` sin autenticación** — subía archivos arbitrarios a R2
+   sin sesión. Ahora es `POST /storage/uploads`, con JWT y validación de tipo y
+   tamaño. Es el upload que usa el onboarding para los documentos.
+
+### ✅ Lecturas y reglas añadidas
+
+- `GET /seller/requests/me` — **la pieza que desbloqueaba el módulo**. Sin ella
+  se perdía el `requestId` al recargar y `POST /seller/requests` respondía 409
+  por la solicitud pendiente, dejando al usuario sin salida.
+- `GET /seller/store`, `GET /catalog/categories`, `GET /seller/products` y
+  `GET /seller/products/:id`.
+- `PATCH /seller/products/:id/publication` — `Producto.publicado` nacía en
+  `false` y **nada lo actualizaba**, mientras el carrito rechaza lo no
+  publicado: un producto creado por la API no podía venderse nunca. Publicar
+  exige ahora una variante activa con inventario y stock
+  (`ProductPublicationPolicy`, con pruebas); retirar de publicación no se
+  valida.
+- **Significado de `REVISION`** — `addDocument` lo ponía al subir el tercer
+  documento, el mismo valor que escribe `submitRequest`. Nada distinguía
+  "expediente completo" de "enviada", así que el paso de envío era inalcanzable
+  y **la cola del administrador listaba solicitudes que su dueño seguía
+  llenando**. Ahora solo `submitRequest` lo escribe.
+- `ParseUUIDPipe` en las rutas de `seller/` y `catalog/`: un id malformado
+  respondía 500 y ahora responde 400.
+
+### Elementos del diseño sin respaldo
+
+| Elemento del diseño | Realidad del contrato | Resolución |
+| --- | --- | --- |
+| Formulario de una página con teléfono, correo de soporte, dirección fiscal, categoría y logotipo | `SolicitudVendedor` solo modela RFC, razón social y régimen fiscal, más tres documentos obligatorios que el diseño omitía | Asistente de 3 pasos dirigido por `pasoActual`; los campos sin respaldo se omiten |
+| "Simulador de Estados (Dev Only)" | — | Eliminado: los estados son reales |
+| KPIs de ventas, gráfica de ingresos, últimos pedidos, clientes | No hay endpoints de métricas ni de pedidos por vendedor | Eliminados; el panel muestra la tienda y el catálogo |
+| Precio de comparación y marca en el producto | No existen en `Producto`; el precio vive en la variante | Eliminados |
+| Eliminar producto | No hay endpoint de borrado | La tabla no ofrece la acción |
+| Aviso por correo al resolverse la solicitud | No hay módulo de notificaciones | Se indica que puede volver a consultar la página |
+| Logotipo de la tienda | `Tienda.logoUrl` existe pero no hay endpoint que lo escriba | Se muestra si viene; no se puede capturar |
+
+### ⚠️ Pendientes conocidos
+
+| Punto | Detalle |
+| --- | --- |
+| Alta de producto no transaccional | Producto, variante, inventario e imágenes son llamadas separadas y el backend no las agrupa. Si falla el inventario, la variante queda creada sin stock; la interfaz lo dice explícitamente y permite corregirlo desde la ficha en vez de fingir atomicidad. |
+| Información fiscal no editable | `addFiscalInformation` responde 409 si ya existe y no hay PATCH. Tras un rechazo hay que iniciar una solicitud nueva y recapturarlo todo. |
+| Sin edición de producto | No existe `PATCH /seller/products/:id`: nombre, descripción, categoría y peso no se pueden corregir tras el alta. |
+| `ADMIN_LOCAL` y `ADMIN_REGIONAL` sin acceso | Por menor privilegio, la revisión de solicitudes es solo de `SUPER_ADMIN`. A decidir en el Módulo 9. |
+
+---
+
 ## 1. Catálogo público (bloquea el embudo de compra)
 
 **Pantallas afectadas:** Home (`/`), Catálogo (`/catalogo`), Detalle de producto (`/producto/:id`).
@@ -325,16 +407,13 @@ No hay módulo de Usuarios expuesto por HTTP. Lo único disponible es
 
 ## 4. Catálogo del vendedor ("Mis productos")
 
-**Pantallas afectadas:** Panel de vendedor (`/vendedor`).
+✅ **Resuelto en el Módulo 8.** `GET /api/seller/products` (paginado, con stock,
+precio desde y estado de publicación) y `GET /api/seller/products/:id` ya
+existen, junto con `PATCH /api/seller/products/:id/publication`.
 
-Se puede **crear** producto, variante, inventario e imágenes, pero no listarlos:
-no existe `GET /api/seller/products`.
-
-| Endpoint esperado |
-| --- |
-| `GET /api/seller/products` (paginado, con stock y estado de publicación) |
-| `GET /api/seller/products/:id` |
-| `PATCH /api/seller/products/:id` |
+Sigue faltando `PATCH /api/seller/products/:id` para **editar** nombre,
+descripción, categoría y peso: hoy un producto no se puede corregir tras el
+alta. Ver la sección 0d.
 
 ---
 
@@ -375,12 +454,12 @@ representen quedan con mock y navegación funcional.
 
 | Punto | Detalle |
 | --- | --- |
-| `src/app/legacy/FigmaExport.tsx` | Quedan **6 pantallas** en un solo archivo (1 909 líneas). El Módulo 7 extrajo `OrderTracking`, `ReceptionistDashboard` y `DriverDashboard`. El archivo desaparece al terminar el Módulo 9. |
+| `src/app/legacy/FigmaExport.tsx` | Quedan **4 pantallas** en un solo archivo (1 190 líneas): "Mi cuenta" y los tres paneles de administración. El Módulo 7 extrajo `OrderTracking`, `ReceptionistDashboard` y `DriverDashboard`; el Módulo 8, `SellerDashboard` y `BecomeSeller`. Desaparece al terminar el Módulo 9. |
 | Cupones de descuento | El campo del carrito es del diseño; no hay modelo ni endpoint de cupones. Avisa "próximamente". |
 | IVA en el carrito | `ShoppingCartDto` no incluye el desglose de IVA (`GET /checkout` sí lo manda en `ivaIncluido`, leyendo `IVA_PERCENTAGE` de la configuración del sistema). Por eso el resumen del carrito indica "IVA incluido" sin cifra y el envío se muestra como "Se calcula en el siguiente paso". |
 | Favoritos | El corazón de la tarjeta de producto y del detalle es solo visual: no existe modelo ni endpoint de favoritos. |
 | Tiendas destacadas | `Tienda` existe en Prisma pero no hay endpoint de lectura; la portada usa contenido estático de `features/catalog/lib/home-content.ts`. |
-| `src/app/legacy/LegacyUiStateProvider.tsx` | Sostiene `sellerStatus`, que dará el onboarding real (Módulo 8). El `mode` cliente/vendedor ya se deriva de los roles de la sesión. |
+| ~~`src/app/legacy/LegacyUiStateProvider.tsx`~~ | **Eliminado en el Módulo 8.** `sellerStatus` lo da `GET /seller/requests/me` y el modo cliente/vendedor se resuelve con rutas y roles reales. |
 | `src/hooks/useViewNavigate.ts` | Traduce el `setView("catalog")` del export a rutas reales. Se elimina cuando todas las pantallas usen `<Link>` / `useNavigate`. |
 | Selector de rol de la navbar | Atajo de demo del diseño de Figma. Con los guards activos, elegir un rol que no se tiene redirige y avisa. Queda por decidir si se retira al cerrar la integración. |
 | Pantalla "Mi cuenta" | La integró el diseño con datos de ejemplo ("María González"). El perfil real depende de un módulo de Usuarios que no existe (ver sección 3). |

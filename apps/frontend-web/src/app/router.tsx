@@ -52,10 +52,16 @@ const VendorShipmentsPage = lazy(() => import('@/features/logistics/pages/Vendor
 const ReceptionPage = lazy(() => import('@/features/logistics/pages/ReceptionPage'));
 const DriverPage = lazy(() => import('@/features/logistics/pages/DriverPage'));
 
+/* Módulo 8 — Seller (onboarding, tienda y catálogo propio) */
+const BecomeSellerPage = lazy(() => import('@/features/seller/pages/BecomeSellerPage'));
+const SellerDashboardPage = lazy(() => import('@/features/seller/pages/SellerDashboardPage'));
+const NewProductPage = lazy(() => import('@/features/seller/pages/NewProductPage'));
+const SellerProductDetailPage = lazy(
+  () => import('@/features/seller/pages/SellerProductDetailPage'),
+);
+
 /* Pendientes de migración */
 const AccountScreen = lazyLegacy('AccountScreen');
-const BecomeSellerScreen = lazyLegacy('BecomeSellerScreen');
-const SellerDashboardScreen = lazyLegacy('SellerDashboardScreen');
 const AdminLocalScreen = lazyLegacy('AdminLocalScreen');
 const AdminRegionalScreen = lazyLegacy('AdminRegionalScreen');
 const AdminSuperScreen = lazyLegacy('AdminSuperScreen');
@@ -94,7 +100,7 @@ export const router = createBrowserRouter([
              por pedido. Se conserva la ruta porque el pie de página enlaza a
              ella desde el diseño. */
           { path: ROUTES.tracking, element: <Navigate to={ROUTES.orders} replace /> },
-          { path: ROUTES.becomeSeller, element: <BecomeSellerScreen />, handle: { title: 'Vender' } },
+          { path: ROUTES.becomeSeller, element: <BecomeSellerPage />, handle: { title: 'Vender' } },
         ],
       },
 
@@ -103,8 +109,11 @@ export const router = createBrowserRouter([
       {
         element: <RoleRoute roles={[ROLES.vendedor]} />,
         children: [
-          { path: ROUTES.sellerDashboard, element: <SellerDashboardScreen />, handle: { title: 'Vendedor' } },
+          { path: ROUTES.sellerDashboard, element: <SellerDashboardPage />, handle: { title: 'Vendedor' } },
           { path: ROUTES.vendorShipments, element: <VendorShipmentsPage />, handle: { title: 'Envíos por entregar' } },
+          /* `nuevo` antes que `:id`: si no, el id capturaría la palabra. */
+          { path: ROUTES.sellerNewProduct, element: <NewProductPage />, handle: { title: 'Nuevo producto' } },
+          { path: `${ROUTES.sellerProducts}/:id`, element: <SellerProductDetailPage />, handle: { title: 'Producto' } },
         ],
       },
       {

@@ -1,7 +1,9 @@
+import { useNavigate } from 'react-router';
+
+import { ROUTES } from '@/constants/routes';
 import { useViewNavigate } from '@/hooks/useViewNavigate';
 
 import * as Figma from './FigmaExport';
-import { useLegacyUiState } from './LegacyUiStateProvider';
 
 /**
  * Adaptadores entre el router y las pantallas del export de Figma.
@@ -17,56 +19,19 @@ import { useLegacyUiState } from './LegacyUiStateProvider';
 
 /**
  * En el export, `/mi-cuenta` alternaba entre el panel de cliente y el de
- * vendedor con un estado local `mode`. Se conserva ese comportamiento hasta que
- * el Módulo 8 lo derive de los roles reales del usuario.
+ * vendedor con un estado local. El panel de vendedor ya es una pantalla real
+ * (`/vendedor`, Módulo 8), así que aquí solo queda el de cliente y el botón de
+ * cambio de rol navega a la ruta correspondiente.
  */
 export function AccountScreen() {
   const setView = useViewNavigate();
-  const { sellerStatus, setSellerStatus, mode, setMode } = useLegacyUiState();
+  const navigate = useNavigate();
 
   return (
     <main>
-      {mode === 'vendedor' ? (
-        <Figma.SellerDashboard setView={setView} switchRole={() => setMode('cliente')} />
-      ) : (
-        <Figma.Dashboard
-          setView={setView}
-          sellerStatus={sellerStatus}
-          setSellerStatus={setSellerStatus}
-          switchRole={() => setMode('vendedor')}
-        />
-      )}
-    </main>
-  );
-}
-
-export function SellerDashboardScreen() {
-  const setView = useViewNavigate();
-  const { setMode } = useLegacyUiState();
-
-  return (
-    <main>
-      <Figma.SellerDashboard
+      <Figma.Dashboard
         setView={setView}
-        switchRole={() => {
-          setMode('cliente');
-          setView('dashboard');
-        }}
-      />
-    </main>
-  );
-}
-
-export function BecomeSellerScreen() {
-  const setView = useViewNavigate();
-  const { sellerStatus, setSellerStatus } = useLegacyUiState();
-
-  return (
-    <main>
-      <Figma.BecomeSeller
-        setView={setView}
-        sellerStatus={sellerStatus}
-        setSellerStatus={setSellerStatus}
+        switchRole={() => navigate(ROUTES.sellerDashboard)}
       />
     </main>
   );

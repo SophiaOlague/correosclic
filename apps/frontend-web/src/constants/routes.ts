@@ -28,6 +28,9 @@ export const ROUTES = {
   becomeSeller: '/vender',
   sellerDashboard: '/vendedor',
   vendorShipments: '/vendedor/envios',
+  /** Ficha de un producto propio: `/vendedor/productos/:id`. */
+  sellerProducts: '/vendedor/productos',
+  sellerNewProduct: '/vendedor/productos/nuevo',
 
   reception: '/recepcion',
   driver: '/repartidor',
