@@ -17,6 +17,7 @@ import { LogisticsOrchestratorService } from '../application/services/logistics-
 import { ShipmentNotFoundException } from '../domain/exceptions/shipment-not-found.exception';
 
 import { ShipmentResponseDto } from '../application/dto/shipment-response.dto';
+import { EmployeeBranchDto } from '../application/dto/employee-branch.dto';
 
 @Controller('logistics')
 @UseGuards(JwtAuthGuard)
@@ -26,6 +27,32 @@ export class LogisticsOpsController {
     private readonly branchRepository: BranchRepository,
     private readonly orchestrator: LogisticsOrchestratorService,
   ) {}
+
+  /**
+   * Sucursal del empleado autenticado. Es el punto de partida de todo el
+   * panel de sucursal: las demás rutas de esta clase reciben el `sucursalId`
+   * y verifican que coincida con el del empleado.
+   */
+  @Get('branches/me')
+  async myBranch(
+    @CurrentUser() user: AuthenticatedUserDto,
+  ): Promise<EmployeeBranchDto> {
+    const empleado = await this.branchRepository.findEmpleadoWithBranchByUsuarioId(
+      user.id,
+    );
+
+    if (!empleado || !empleado.activo) {
+      throw new ShipmentNotFoundException();
+    }
+
+    return {
+      empleadoId: empleado.id,
+      puesto: empleado.puesto,
+      sucursalId: empleado.sucursal.id,
+      codigo: empleado.sucursal.codigo,
+      nombre: empleado.sucursal.nombre,
+    };
+  }
 
   @Get('branches/:sucursalId/reception-queue')
   async receptionQueue(

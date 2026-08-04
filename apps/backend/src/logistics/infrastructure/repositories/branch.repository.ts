@@ -51,4 +51,17 @@ export class BranchRepository {
       select: { id: true, sucursalId: true, activo: true },
     });
   }
+
+  /** Igual que el anterior pero con los datos de la sucursal, para `GET /logistics/branches/me`. */
+  async findEmpleadoWithBranchByUsuarioId(usuarioId: string) {
+    return this.prisma.empleado.findUnique({
+      where: { usuarioId },
+      select: {
+        id: true,
+        puesto: true,
+        activo: true,
+        sucursal: { select: { id: true, codigo: true, nombre: true } },
+      },
+    });
+  }
 }
