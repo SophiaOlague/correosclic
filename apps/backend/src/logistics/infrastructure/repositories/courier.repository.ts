@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { EstadoEnvio } from '@correosclic/database';
 
 import { PrismaService } from '../../../prisma/prisma.service';
 import { CourierCandidate } from '../../domain/services/delivery-assignment-policy';
@@ -58,9 +59,21 @@ export class CourierRepository {
     });
   }
 
+  /**
+   * Entregas que el repartidor todavía tiene abiertas.
+   *
+   * El criterio es el estado del envío, no `fechaEntrega: null`. Esa fecha solo
+   * se escribe cuando el paquete se entrega, así que cualquier desenlace que no
+   * sea una entrega -- devolución al agotarse los intentos, cancelación,
+   * extravío -- la dejaba en null para siempre y la entrega seguía apareciendo
+   * como activa. `EstadoEnvio` es lo que el dominio mantiene de verdad, vía
+   * ShipmentStateTransitionPolicy, y EN_REPARTO es exactamente la fase en la
+   * que el repartidor puede actuar: fuera de ella, recordDeliveryAttempt
+   * rechaza el intento con InvalidShipmentTransitionException.
+   */
   async findActiveEntregasByRepartidorId(repartidorId: string) {
     return this.prisma.entrega.findMany({
-      where: { repartidorId, fechaEntrega: null },
+      where: { repartidorId, envio: { estado: EstadoEnvio.EN_REPARTO } },
       include: { envio: { select: { id: true, trackingInterno: true, estado: true } } },
       orderBy: { fechaAsignacion: 'asc' },
     });
