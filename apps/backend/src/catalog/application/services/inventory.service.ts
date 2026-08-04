@@ -18,6 +18,7 @@ import { ReleaseInventoryDto } from '../dto/release-inventory.dto';
 import { InsufficientReservedStockException } from '../../domain/exceptions/insufficient-reserved-stock.exception';
 import { ConfirmInventoryDto } from '../../application/dto/confirm-inventory.dto';
 import { VariantRepository } from '../../infrastructure/repositories/variant.repository';
+import { SellerRepository } from '../../infrastructure/repositories/seller.repository';
 
 @Injectable()
 export class InventoryService {
@@ -25,22 +26,54 @@ export class InventoryService {
   constructor(
     private readonly repository: InventoryRepository,
     private readonly variantRepository: VariantRepository,
+    private readonly sellerRepository: SellerRepository,
   ) {}
 
+  /**
+   * El inventario de una variante solo lo toca el vendedor dueño del producto.
+   *
+   * Sin esta comprobación, `variantId` viajaba en la URL sin validar: cualquier
+   * usuario autenticado podía dejar en cero el stock de cualquier vendedor.
+   * Responde 404 y no 403, igual que el resto del catálogo.
+   */
+  private async assertVariantOwnership(
+    userId: string,
+    variantId: string,
+  ): Promise<void> {
+
+    const store =
+      await this.sellerRepository.findStoreByUserId(
+        userId,
+      );
+
+    if (!store) {
+      throw new VariantNotFoundException();
+    }
+
+    const variant =
+      await this.variantRepository.findByIdWithStore(
+        variantId,
+      );
+
+    if (
+      !variant ||
+      variant.producto.tiendaId !== store.id
+    ) {
+      throw new VariantNotFoundException();
+    }
+  }
+
   async create(
+    userId: string,
     variantId: string,
     dto: CreateInventoryDto,
   ): Promise<InventoryResponseDto> {
 
     // Paso 1
-    const variant =
-  await this.variantRepository.findById(
-    variantId,
-  );
-
-    if (!variant) {
-      throw new VariantNotFoundException();
-    }
+    await this.assertVariantOwnership(
+      userId,
+      variantId,
+    );
 
     // Paso 2
     const inventory =
@@ -90,9 +123,15 @@ export class InventoryService {
   }
 //Actualizar inventario
 async update(
+  userId: string,
   variantId: string,
   dto: UpdateInventoryDto,
 ): Promise<InventoryResponseDto> {
+
+  await this.assertVariantOwnership(
+    userId,
+    variantId,
+  );
 
   const inventory =
     await this.repository.findInventoryByVariantId(
