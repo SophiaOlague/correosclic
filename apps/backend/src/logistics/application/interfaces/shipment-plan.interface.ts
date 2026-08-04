@@ -5,6 +5,11 @@
  * de reparto: ese tipo simplemente no existe en su union.
  */
 
+export type ReceptionOutcomePlan =
+  | { accion: 'ACEPTAR' }
+  | { accion: 'MARCAR_DANADO' }
+  | { accion: 'RECHAZAR' };
+
 export type RoutingPlan =
   | { accion: 'SIN_TRANSFERENCIA' }
   | { accion: 'CREAR_TRANSFERENCIA'; vehiculoId: string }

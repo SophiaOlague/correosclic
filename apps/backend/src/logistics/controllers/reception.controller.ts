@@ -27,6 +27,7 @@ export class ReceptionController {
     const envio = await this.orchestrator.confirmReception({
       trackingInterno: dto.trackingInterno,
       usuarioId: user.id,
+      resultado: dto.resultado,
       observaciones: dto.observaciones,
       pesoRealKg: dto.pesoRealKg,
     });

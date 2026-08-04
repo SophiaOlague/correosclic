@@ -19,6 +19,12 @@ export interface CreateShipmentParams {
 export interface ConfirmReceptionParams {
   envioId: string;
   empleadoId: string;
+  /**
+   * Estado en el que queda el envío tras la recepción, decidido por
+   * LogisticsPlanningEngine.planReceptionOutcomePhase: RECIBIDO_SUCURSAL si se
+   * aceptó, o DANADO / CANCELADO si el recepcionista certificó una incidencia.
+   */
+  estadoDestino: EstadoEnvio;
   observaciones?: string;
   /** Medido en báscula por el recepcionista al momento del escaneo. */
   pesoRealKg?: number;
@@ -64,6 +70,24 @@ const DESCRIPCION_POR_ESTADO: Record<EstadoEnvio, string> = {
   [EstadoEnvio.EXTRAVIADO]: 'Paquete reportado como extraviado.',
   [EstadoEnvio.DANADO]: 'Paquete reportado como dañado.',
 };
+
+/**
+ * Un estado terminal certificado en recepción no puede quedar en el historial
+ * sin su motivo: ahí las observaciones del recepcionista se anexan a la
+ * descripción del evento para que el cliente vea por qué se detuvo su envío.
+ *
+ * En una recepción aceptada no se anexan: son notas internas de la operación,
+ * viven en `RecepcionSucursal.observaciones` y no tienen por qué aparecer en el
+ * seguimiento que ve el cliente.
+ */
+function describirEstado(estado: EstadoEnvio, observaciones?: string): string {
+  const base = DESCRIPCION_POR_ESTADO[estado];
+
+  const esDesenlaceAdverso =
+    estado === EstadoEnvio.DANADO || estado === EstadoEnvio.CANCELADO;
+
+  return esDesenlaceAdverso && observaciones ? `${base} Motivo: ${observaciones}` : base;
+}
 
 @Injectable()
 export class ShipmentRepository {
@@ -111,7 +135,9 @@ export class ShipmentRepository {
         },
         sucursalOrigen: { select: { id: true, nombre: true } },
         sucursalDestino: { select: { id: true, nombre: true } },
-        entrega: { include: { intentos: true } },
+        entrega: {
+          include: { intentos: { orderBy: { numeroIntento: 'asc' } } },
+        },
         eventosTracking: { orderBy: { createdAt: 'asc' } },
         transferencias: { orderBy: { createdAt: 'asc' } },
       },
@@ -190,6 +216,12 @@ export class ShipmentRepository {
    * mueve el estado con un update condicionado (solo si sigue en
    * PENDIENTE_RECEPCION -- protege contra doble escaneo de la misma guía) y
    * registra el evento de tracking. Devuelve null si el guard no aplicó.
+   *
+   * `estadoDestino` cubre los tres desenlaces posibles del escaneo. Cuando el
+   * recepcionista certifica daño o rechazo, el envío salta directo a su estado
+   * terminal: no pasa por RECIBIDO_SUCURSAL porque nunca entra a la red. La
+   * RecepcionSucursal se registra igual en los tres casos -- el hecho de que
+   * alguien revisó ese paquete en esa sucursal ocurrió.
    */
   async confirmReception(params: ConfirmReceptionParams) {
     return this.prisma.$transaction(async (tx) => {
@@ -199,7 +231,7 @@ export class ShipmentRepository {
           estado: EstadoEnvio.PENDIENTE_RECEPCION,
         },
         data: {
-          estado: EstadoEnvio.RECIBIDO_SUCURSAL,
+          estado: params.estadoDestino,
           ...(params.pesoRealKg !== undefined && {
             pesoRealKg: params.pesoRealKg,
             // Sin cálculo volumétrico en v1 (decisión de alcance): el peso
@@ -229,8 +261,11 @@ export class ShipmentRepository {
       await tx.eventoTracking.create({
         data: {
           envioId: params.envioId,
-          estado: EstadoEnvio.RECIBIDO_SUCURSAL,
-          descripcion: DESCRIPCION_POR_ESTADO[EstadoEnvio.RECIBIDO_SUCURSAL],
+          estado: params.estadoDestino,
+          descripcion: describirEstado(
+            params.estadoDestino,
+            params.observaciones,
+          ),
         },
       });
 

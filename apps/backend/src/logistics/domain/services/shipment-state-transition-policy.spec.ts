@@ -62,6 +62,21 @@ describe('ShipmentStateTransitionPolicy', () => {
     ).toBe(false);
   });
 
+  it('permite que la recepción cierre el envío en DANADO o CANCELADO sin pasar por RECIBIDO_SUCURSAL', () => {
+    expect(
+      policy.isValidTransition(
+        EstadoEnvio.PENDIENTE_RECEPCION,
+        EstadoEnvio.DANADO,
+      ),
+    ).toBe(true);
+    expect(
+      policy.isValidTransition(
+        EstadoEnvio.PENDIENTE_RECEPCION,
+        EstadoEnvio.CANCELADO,
+      ),
+    ).toBe(true);
+  });
+
   it('permite pasar a estados excepcionales desde etapas operativas activas', () => {
     expect(
       policy.isValidTransition(EstadoEnvio.EN_TRANSITO, EstadoEnvio.EXTRAVIADO),

@@ -5,7 +5,11 @@ import { ShipmentRepository } from '../../infrastructure/repositories/shipment.r
 import { BranchRepository } from '../../infrastructure/repositories/branch.repository';
 import { CourierRepository } from '../../infrastructure/repositories/courier.repository';
 
-import { LogisticsPlanningEngine } from './logistics-planning.engine';
+import {
+  ESTADO_POR_RESULTADO_RECEPCION,
+  LogisticsPlanningEngine,
+} from './logistics-planning.engine';
+import { ResultadoRecepcion } from '../../domain/resultado-recepcion';
 
 import { ShipmentNotFoundException } from '../../domain/exceptions/shipment-not-found.exception';
 import { InvalidShipmentTransitionException } from '../../domain/exceptions/invalid-shipment-transition.exception';
@@ -14,6 +18,8 @@ import { InvalidShipmentPhaseException } from '../../domain/exceptions/invalid-s
 export interface ConfirmReceptionInput {
   trackingInterno: string;
   usuarioId: string;
+  /** Omitido equivale a ACEPTADO: el flujo de siempre. */
+  resultado?: ResultadoRecepcion;
   observaciones?: string;
   pesoRealKg?: number;
 }
@@ -73,9 +79,20 @@ export class LogisticsOrchestratorService {
       throw new ShipmentNotFoundException();
     }
 
+    const resultado = input.resultado ?? ResultadoRecepcion.ACEPTADO;
+
+    // Valida la transición antes de tocar nada. Devuelve el plan, pero lo que
+    // importa aquí es que un resultado imposible para el estado actual muere
+    // en esta línea.
+    const plan = this.planningEngine.planReceptionOutcomePhase({
+      estado: envio.estado,
+      resultado,
+    });
+
     const recibido = await this.shipmentRepository.confirmReception({
       envioId: envio.id,
       empleadoId: empleado.id,
+      estadoDestino: ESTADO_POR_RESULTADO_RECEPCION[resultado],
       observaciones: input.observaciones,
       pesoRealKg: input.pesoRealKg,
     });
@@ -84,7 +101,11 @@ export class LogisticsOrchestratorService {
       throw new InvalidShipmentTransitionException();
     }
 
-    await this.runClassificationAndRouting(recibido);
+    // Daño y rechazo son estados terminales: el paquete no entra a la red, así
+    // que no hay clasificación, ni ruta, ni repartidor que buscar.
+    if (plan.accion === 'ACEPTAR') {
+      await this.runClassificationAndRouting(recibido);
+    }
 
     return this.getDetailOrThrow(envio.id);
   }

@@ -21,6 +21,10 @@ const TRANSICIONES_VALIDAS: Record<EstadoEnvio, EstadoEnvio[]> = {
   [EstadoEnvio.PENDIENTE_RECEPCION]: [
     EstadoEnvio.PENDIENTE_RECEPCION,
     EstadoEnvio.RECIBIDO_SUCURSAL,
+    // El recepcionista puede certificar que el paquete llegó dañado o que no
+    // se acepta en sucursal. En ninguno de los dos casos el envío pasa por
+    // RECIBIDO_SUCURSAL: nunca entra a la red logística.
+    EstadoEnvio.DANADO,
     EstadoEnvio.CANCELADO,
   ],
   [EstadoEnvio.RECIBIDO_SUCURSAL]: [
