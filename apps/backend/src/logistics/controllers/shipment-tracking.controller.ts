@@ -11,6 +11,7 @@ import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { AuthenticatedUserDto } from '../../auth/dto/authenticated-user.dto';
 
 import { ShipmentRepository } from '../infrastructure/repositories/shipment.repository';
+import { CourierRepository } from '../infrastructure/repositories/courier.repository';
 import { ShipmentNotFoundException } from '../domain/exceptions/shipment-not-found.exception';
 
 import { ShipmentResponseDto } from '../application/dto/shipment-response.dto';
@@ -19,7 +20,10 @@ import { ShipmentSummaryDto } from '../application/dto/shipment-summary.dto';
 @Controller('logistics')
 @UseGuards(JwtAuthGuard)
 export class ShipmentTrackingController {
-  constructor(private readonly shipmentRepository: ShipmentRepository) {}
+  constructor(
+    private readonly shipmentRepository: ShipmentRepository,
+    private readonly courierRepository: CourierRepository,
+  ) {}
 
   @Get('orders/:pedidoId/shipments')
   async listByOrder(
@@ -84,15 +88,21 @@ export class ShipmentTrackingController {
       throw new ShipmentNotFoundException();
     }
 
-    const [cliente, vendedor] = await Promise.all([
+    const [cliente, vendedor, repartidor] = await Promise.all([
       this.shipmentRepository.findClienteByUsuarioId(user.id),
       this.shipmentRepository.findVendedorByUsuarioId(user.id),
+      this.courierRepository.findByUsuarioId(user.id),
     ]);
 
     const esDelCliente = cliente?.id === envio.pedidoVendedor.pedido.clienteId;
     const esDelVendedor = vendedor?.id === envio.pedidoVendedor.vendedorId;
+    // El repartidor solo ve los envíos que le fueron asignados, y solo
+    // mientras la asignación exista: no puede consultar guías ajenas.
+    const esSuEntrega =
+      repartidor?.activo === true &&
+      envio.entrega?.repartidorId === repartidor.id;
 
-    if (!esDelCliente && !esDelVendedor) {
+    if (!esDelCliente && !esDelVendedor && !esSuEntrega) {
       throw new ShipmentNotFoundException();
     }
 

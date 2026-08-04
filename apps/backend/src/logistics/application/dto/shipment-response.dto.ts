@@ -1,4 +1,4 @@
-import { EstadoEnvio } from '@correosclic/database';
+import { EstadoEnvio, ResultadoIntentoEntrega } from '@correosclic/database';
 
 import { ShipmentDetailRecord } from '../../infrastructure/repositories/shipment.repository';
 
@@ -6,6 +6,38 @@ export class TrackingEventDto {
   estado!: EstadoEnvio;
   descripcion!: string;
   createdAt!: Date;
+}
+
+export class DeliveryAttemptDto {
+  id!: string;
+  numeroIntento!: number;
+  resultado!: ResultadoIntentoEntrega;
+  observaciones!: string | null;
+  fotoIntentoUrl!: string | null;
+  createdAt!: Date;
+}
+
+export class ShipmentDeliveryDto {
+  id!: string;
+  repartidorId!: string;
+  fechaAsignacion!: Date;
+  fechaEntrega!: Date | null;
+  nombreRecibe!: string | null;
+  intentos!: DeliveryAttemptDto[];
+}
+
+/**
+ * Transferencia troncal entre sucursales. Se expone porque
+ * `POST /logistics/transfers/:id/arrival` necesita este `id`, y sin él no
+ * había forma de confirmar la llegada desde fuera del backend.
+ */
+export class ShipmentTransferDto {
+  id!: string;
+  sucursalOrigenId!: string;
+  sucursalDestinoId!: string;
+  vehiculoId!: string;
+  fechaSalida!: Date;
+  fechaLlegada!: Date | null;
 }
 
 export class ShipmentResponseDto {
@@ -19,12 +51,8 @@ export class ShipmentResponseDto {
   pesoRealKg!: number | null;
   fechaEntregaEstimada!: Date | null;
   fechaEntregaReal!: Date | null;
-  entrega!: {
-    repartidorId: string;
-    fechaAsignacion: Date;
-    fechaEntrega: Date | null;
-    intentos: number;
-  } | null;
+  entrega!: ShipmentDeliveryDto | null;
+  transferencias!: ShipmentTransferDto[];
   historial!: TrackingEventDto[];
 
   static fromRecord(record: ShipmentDetailRecord): ShipmentResponseDto {
@@ -43,12 +71,30 @@ export class ShipmentResponseDto {
 
     dto.entrega = record.entrega
       ? {
+          id: record.entrega.id,
           repartidorId: record.entrega.repartidorId,
           fechaAsignacion: record.entrega.fechaAsignacion,
           fechaEntrega: record.entrega.fechaEntrega,
-          intentos: record.entrega.intentos.length,
+          nombreRecibe: record.entrega.nombreRecibe,
+          intentos: record.entrega.intentos.map((intento) => ({
+            id: intento.id,
+            numeroIntento: intento.numeroIntento,
+            resultado: intento.resultado,
+            observaciones: intento.observaciones,
+            fotoIntentoUrl: intento.fotoIntentoUrl,
+            createdAt: intento.createdAt,
+          })),
         }
       : null;
+
+    dto.transferencias = record.transferencias.map((transferencia) => ({
+      id: transferencia.id,
+      sucursalOrigenId: transferencia.sucursalOrigenId,
+      sucursalDestinoId: transferencia.sucursalDestinoId,
+      vehiculoId: transferencia.vehiculoId,
+      fechaSalida: transferencia.fechaSalida,
+      fechaLlegada: transferencia.fechaLlegada,
+    }));
 
     dto.historial = record.eventosTracking.map((evento) => ({
       estado: evento.estado,
