@@ -1,4 +1,4 @@
-import { LogOut, Package, User } from 'lucide-react';
+import { LogOut, Package, Truck, User } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
 
@@ -10,6 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { ROLES } from '@/constants/roles';
 import { ROUTES } from '@/constants/routes';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -21,7 +22,7 @@ import { landingRouteFor } from '@/features/auth/lib/role-landing';
  * Mantiene el mismo tamaño, radio y estados hover del diseño.
  */
 export function AccountMenu() {
-  const { isAuthenticated, user, signOut } = useAuth();
+  const { isAuthenticated, user, signOut, hasRole } = useAuth();
   const navigate = useNavigate();
 
   if (!isAuthenticated || !user) {
@@ -66,6 +67,15 @@ export function AccountMenu() {
           <Package className="w-4 h-4 text-muted-foreground" />
           Mis pedidos
         </DropdownMenuItem>
+
+        {/* Único acceso a los envíos que el vendedor debe llevar a sucursal:
+            el panel de vendedor todavía es la pantalla del export (Módulo 8). */}
+        {hasRole(ROLES.vendedor) && (
+          <DropdownMenuItem onSelect={() => navigate(ROUTES.vendorShipments)}>
+            <Truck className="w-4 h-4 text-muted-foreground" />
+            Envíos por entregar
+          </DropdownMenuItem>
+        )}
 
         <DropdownMenuSeparator />
 

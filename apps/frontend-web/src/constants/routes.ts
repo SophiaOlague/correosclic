@@ -16,10 +16,18 @@ export const ROUTES = {
 
   account: '/mi-cuenta',
   orders: '/mis-pedidos',
+  /** Detalle de un envío: `/envio/:id`. */
+  shipment: '/envio',
+  /**
+   * El backend no expone ninguna lista global de envíos: solo los de un pedido
+   * (`GET /logistics/orders/:pedidoId/shipments`). Sin un pedido de partida no
+   * hay nada que rastrear, así que esta ruta lleva a "Mis pedidos".
+   */
   tracking: '/rastreo',
 
   becomeSeller: '/vender',
   sellerDashboard: '/vendedor',
+  vendorShipments: '/vendedor/envios',
 
   reception: '/recepcion',
   driver: '/repartidor',

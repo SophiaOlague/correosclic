@@ -3,7 +3,7 @@
 Registro de las pantallas cuyo backend todavía no existe y de los contratos que
 harían falta para conectarlas. Se actualiza al cerrar cada módulo.
 
-**Última actualización:** 2026-08-01 (cierre del Módulo 6 — Payments)
+**Última actualización:** 2026-08-03 (cierre del Módulo 7 — Logistics)
 
 > **Carrito integrado.** `/cart` es el primer módulo enteramente conectado a la
 > API. Para que el flujo funcione de punta a punta pese a que el catálogo sigue
@@ -77,6 +77,98 @@ Dentro de la misma transacción que ya marcaba el pedido, ahora también se
 mueven todos sus `PedidoVendedor` que sigan en `PENDIENTE_PAGO`. Se acota a ese
 estado para no revivir a un vendedor cancelado, y un pago fallido no mueve
 nada.
+
+---
+
+## 0c. Logistics — lo integrado y lo que falta
+
+Los 10 endpoints reales quedaron integrados, más uno nuevo autorizado. El
+motor de planificación es la autoridad: la interfaz **certifica hechos físicos
+y muestra estados**, nunca elige ruta, vehículo ni repartidor.
+
+| Pantalla | Ruta | Endpoints |
+| --- | --- | --- |
+| Envíos dentro del pedido | `/mis-pedidos/:id` | `GET /logistics/orders/:pedidoId/shipments` |
+| Detalle y tracking | `/envio/:id` | `GET /logistics/shipments/:id` |
+| Envíos del vendedor | `/vendedor/envios` | `GET /logistics/vendors/me/pending-shipments` |
+| Panel de recepción | `/recepcion` | `GET /logistics/branches/me`, `.../reception-queue`, `.../dispatch-queue`, `POST /logistics/reception`, `POST /logistics/shipments/:id/retry-planning`, `POST /logistics/transfers/:id/arrival` |
+| Panel del repartidor | `/repartidor` | `GET /logistics/couriers/me/deliveries`, `POST /logistics/deliveries/:entregaId/attempts` |
+
+### ✅ Cambios de backend autorizados en este módulo
+
+Cuatro commits independientes del frontend, todos aprobados antes de tocar nada:
+
+1. **`GET /logistics/branches/me`** — sin él, las tres rutas que reciben
+   `sucursalId` en la ruta eran inalcanzables: `AuthenticatedUserDto` no trae la
+   adscripción a sucursal y ningún endpoint devolvía el `Empleado`.
+
+   **Decisión de diseño confirmada:** `AuthenticatedUserDto` se mantiene
+   acotado a identidad y autorización (`id`, `email`, nombre, `roles`), y el
+   contexto operativo del empleado —sucursal, `empleadoId`, puesto— vive dentro
+   del dominio de Logistics. Añadirlo al DTO de sesión habría obligado a
+   `JwtStrategy` a resolver un `Empleado` en **cada petición autenticada del
+   sistema**, incluidos los usuarios que nunca tocan Logistics. Por eso el
+   frontend obtiene ese contexto con `GET /logistics/branches/me`
+   (`useMyBranch`), que es la primera consulta del panel de recepción y la que
+   provee el `sucursalId` a las colas y al reintento de planificación.
+2. **Resultados de recepción** — `ConfirmReceptionDto` acepta
+   `resultado?: ACEPTADO | DANADO | RECHAZADO` (omitirlo equivale a `ACEPTADO`,
+   así que el flujo anterior no cambia) con `observaciones` obligatorias cuando
+   no es `ACEPTADO`. Nueva fase `planReceptionOutcomePhase` en el motor, que es
+   además donde por fin se **inyecta `ShipmentStateTransitionPolicy`**: estaba
+   registrada como provider pero no participaba en ninguna validación.
+   Transiciones: `PENDIENTE_RECEPCION → DANADO` (arista nueva en el grafo) y
+   `PENDIENTE_RECEPCION → CANCELADO` (ya declarada). Ninguna de las dos pasa por
+   `RECIBIDO_SUCURSAL` ni encadena clasificación: el paquete no entra a la red.
+   `DEVUELTO` queda reservado para lo que sí inició su ciclo y regresó.
+3. **Ownership del repartidor y DTO ampliado** — `GET /logistics/shipments/:id`
+   admite al repartidor con la entrega asignada (antes le respondía 404), y
+   `ShipmentResponseDto` expone `entrega.intentos[]` y `transferencias[]`. Antes
+   `intentos` era solo un contador —el historial de intentos no salía del
+   backend— y sin `transferencias[]` no había forma de obtener el
+   `transferenciaId` que exige `POST /logistics/transfers/:id/arrival`, que era
+   por tanto inalcanzable desde cualquier interfaz.
+4. **Semilla** (`packages/database`) — `logistics.seed.ts` creaba empleados y
+   repartidor sin asignarles `UsuarioRol`. Los endpoints funcionaban porque
+   validan contra `Empleado`/`Repartidor`, pero `RoleRoute` dejaba al
+   recepcionista y al repartidor fuera de su propio panel.
+
+5. **Cierre de la entrega tras una devolución** —
+   `findActiveEntregasByRepartidorId` decidía qué entregas siguen abiertas con
+   `fechaEntrega: null`, pero esa fecha **solo se escribe cuando el paquete se
+   entrega**. Al agotarse los intentos, el envío pasaba a `DEVUELTO` y la
+   entrega se quedaba para siempre en "mis entregas asignadas".
+
+   Se corrigió el predicado en vez de escribir la fecha: rellenar
+   `fechaEntrega` en una devolución sería un dato falso —ese paquete nunca se
+   entregó— y solo habría tapado ese caso, dejando colgadas las entregas cuyo
+   envío acabe en `CANCELADO` o `EXTRAVIADO`. Ahora la consulta filtra por
+   `envio.estado === EN_REPARTO`, que es lo que el dominio mantiene de verdad
+   vía `ShipmentStateTransitionPolicy` y coincide exactamente con la fase en la
+   que `recordDeliveryAttempt` acepta un intento. El envío devuelto sigue
+   siendo consultable por el repartidor en `GET /logistics/shipments/:id`: el
+   ownership depende de `Entrega.repartidorId`, no de esta lista.
+
+### ⚠️ Defectos del backend detectados y **no** corregidos
+
+| Punto | Detalle |
+| --- | --- |
+| Colas sin DTO | `reception-queue` y `dispatch-queue` devuelven el registro `Envio` de Prisma tal cual: sin número de pedido, cliente ni vendedor, y con los `Decimal` serializados como cadena. Por eso la tabla del panel de recepción tiene menos columnas que el diseño de Figma. |
+| Empleado sin acceso al detalle | El ownership de `GET /logistics/shipments/:id` cubre cliente, vendedor y repartidor, pero **no al empleado de sucursal**: al recepcionista le responde 404. El panel esquiva el hueco usando el `ShipmentResponseDto` que ya devuelve el propio `POST /logistics/reception`. |
+| `fechaEntregaEstimada` nunca se escribe | La columna existe y el DTO la devuelve, pero ningún servicio la calcula: siempre es `null`. La interfaz solo la muestra si llega con valor, así que hoy no aparece. |
+
+### Elementos del diseño sin respaldo
+
+| Elemento del diseño | Realidad del contrato | Resolución |
+| --- | --- | --- |
+| Mapa con ruta, distancia al siguiente destino y ETA | No hay modelo de rutas de reparto ni coordenadas de entrega | Se sustituye por la lista de entregas asignadas y el detalle real del envío |
+| Fotografía de evidencia (recepción y entrega) | `fotoIntentoUrl` se acepta en el DTO, pero no hay endpoint de subida de archivos (`POST /storage/test` no lo es) | La interfaz **muestra** la evidencia si existe, pero no permite capturarla |
+| Firma del destinatario | No existe en el esquema | Eliminado |
+| KPIs del turno, incidencias, historial de recepciones | No hay agregados ni endpoint de historial por sucursal | Eliminados; el panel muestra las dos colas reales |
+| Guía "Correos de México" (`MX-…`) | Solo existe `trackingInterno` (`ENV-…`) | Se muestra únicamente la guía real |
+| Checklist de 6 verificaciones | No se persiste en ningún modelo | Se conserva como control local previo a certificar: habilita "Confirmar recepción" o deriva a "Registrar incidencia" |
+| Lista global "mis envíos" del cliente | Solo existe por pedido | `/rastreo` redirige a "Mis pedidos" |
+| Selector de estado del repartidor (Disponible / En ruta) | No existe en el esquema | Eliminado |
 
 ---
 
@@ -283,7 +375,7 @@ representen quedan con mock y navegación funcional.
 
 | Punto | Detalle |
 | --- | --- |
-| `src/app/legacy/FigmaExport.tsx` | Las 10 pantallas restantes del export siguen en un solo archivo (3 348 líneas). Cada módulo extrae las suyas a `features/`. El archivo desaparece al terminar el Módulo 9. |
+| `src/app/legacy/FigmaExport.tsx` | Quedan **6 pantallas** en un solo archivo (1 909 líneas). El Módulo 7 extrajo `OrderTracking`, `ReceptionistDashboard` y `DriverDashboard`. El archivo desaparece al terminar el Módulo 9. |
 | Cupones de descuento | El campo del carrito es del diseño; no hay modelo ni endpoint de cupones. Avisa "próximamente". |
 | IVA en el carrito | `ShoppingCartDto` no incluye el desglose de IVA (`GET /checkout` sí lo manda en `ivaIncluido`, leyendo `IVA_PERCENTAGE` de la configuración del sistema). Por eso el resumen del carrito indica "IVA incluido" sin cifra y el envío se muestra como "Se calcula en el siguiente paso". |
 | Favoritos | El corazón de la tarjeta de producto y del detalle es solo visual: no existe modelo ni endpoint de favoritos. |

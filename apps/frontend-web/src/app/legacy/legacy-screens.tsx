@@ -15,14 +15,6 @@ import { useLegacyUiState } from './LegacyUiStateProvider';
  * la API; todas siguen mostrando los datos de ejemplo del diseño.
  */
 
-export function TrackingScreen() {
-  return (
-    <main>
-      <Figma.OrderTracking setView={useViewNavigate()} />
-    </main>
-  );
-}
-
 /**
  * En el export, `/mi-cuenta` alternaba entre el panel de cliente y el de
  * vendedor con un estado local `mode`. Se conserva ese comportamiento hasta que
@@ -81,14 +73,6 @@ export function BecomeSellerScreen() {
 }
 
 /* Paneles a pantalla completa: en el export se montaban fuera de `<main>`. */
-
-export function ReceptionScreen() {
-  return <Figma.ReceptionistDashboard setView={useViewNavigate()} />;
-}
-
-export function DriverScreen() {
-  return <Figma.DriverDashboard setView={useViewNavigate()} />;
-}
 
 export function AdminLocalScreen() {
   return <Figma.LocalAdminDashboard setView={useViewNavigate()} />;

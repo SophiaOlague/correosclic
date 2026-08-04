@@ -46,13 +46,16 @@ const OrderDetailPage = lazy(() => import('@/features/orders/pages/OrderDetailPa
 /* Módulo 6 — Payments (Stripe Elements aislado en features/payments) */
 const PaymentPage = lazy(() => import('@/features/payments/pages/PaymentPage'));
 
+/* Módulo 7 — Logistics (integrado contra `/logistics`) */
+const ShipmentDetailPage = lazy(() => import('@/features/logistics/pages/ShipmentDetailPage'));
+const VendorShipmentsPage = lazy(() => import('@/features/logistics/pages/VendorShipmentsPage'));
+const ReceptionPage = lazy(() => import('@/features/logistics/pages/ReceptionPage'));
+const DriverPage = lazy(() => import('@/features/logistics/pages/DriverPage'));
+
 /* Pendientes de migración */
 const AccountScreen = lazyLegacy('AccountScreen');
-const TrackingScreen = lazyLegacy('TrackingScreen');
 const BecomeSellerScreen = lazyLegacy('BecomeSellerScreen');
 const SellerDashboardScreen = lazyLegacy('SellerDashboardScreen');
-const ReceptionScreen = lazyLegacy('ReceptionScreen');
-const DriverScreen = lazyLegacy('DriverScreen');
 const AdminLocalScreen = lazyLegacy('AdminLocalScreen');
 const AdminRegionalScreen = lazyLegacy('AdminRegionalScreen');
 const AdminSuperScreen = lazyLegacy('AdminSuperScreen');
@@ -86,7 +89,11 @@ export const router = createBrowserRouter([
           { path: ROUTES.orders, element: <OrdersPage />, handle: { title: 'Mis pedidos' } },
           { path: `${ROUTES.orders}/:id`, element: <OrderDetailPage />, handle: { title: 'Detalle del pedido' } },
           { path: `${ROUTES.payment}/:orderId`, element: <PaymentPage />, handle: { title: 'Pagar pedido' } },
-          { path: ROUTES.tracking, element: <TrackingScreen />, handle: { title: 'Rastrear pedido' } },
+          { path: `${ROUTES.shipment}/:id`, element: <ShipmentDetailPage />, handle: { title: 'Seguimiento del envío' } },
+          /* Sin un pedido no hay envíos que listar: el backend solo los expone
+             por pedido. Se conserva la ruta porque el pie de página enlaza a
+             ella desde el diseño. */
+          { path: ROUTES.tracking, element: <Navigate to={ROUTES.orders} replace /> },
           { path: ROUTES.becomeSeller, element: <BecomeSellerScreen />, handle: { title: 'Vender' } },
         ],
       },
@@ -97,18 +104,19 @@ export const router = createBrowserRouter([
         element: <RoleRoute roles={[ROLES.vendedor]} />,
         children: [
           { path: ROUTES.sellerDashboard, element: <SellerDashboardScreen />, handle: { title: 'Vendedor' } },
+          { path: ROUTES.vendorShipments, element: <VendorShipmentsPage />, handle: { title: 'Envíos por entregar' } },
         ],
       },
       {
         element: <RoleRoute roles={[ROLES.recepcion]} />,
         children: [
-          { path: ROUTES.reception, element: <ReceptionScreen />, handle: { title: 'Recepción' } },
+          { path: ROUTES.reception, element: <ReceptionPage />, handle: { title: 'Recepción' } },
         ],
       },
       {
         element: <RoleRoute roles={[ROLES.repartidor]} />,
         children: [
-          { path: ROUTES.driver, element: <DriverScreen />, handle: { title: 'Repartidor' } },
+          { path: ROUTES.driver, element: <DriverPage />, handle: { title: 'Repartidor' } },
         ],
       },
       {

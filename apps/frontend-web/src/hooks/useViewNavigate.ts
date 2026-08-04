@@ -24,7 +24,9 @@ const VIEW_TO_ROUTE: Record<string, string> = {
   cart: ROUTES.cart,
   checkout: ROUTES.checkout,
   dashboard: ROUTES.account,
-  tracking: ROUTES.tracking,
+  // Sin un pedido concreto no hay envíos que rastrear: Logistics solo los
+  // expone por pedido.
+  tracking: ROUTES.orders,
   become_seller: ROUTES.becomeSeller,
   seller_dashboard: ROUTES.sellerDashboard,
   receptionist: ROUTES.reception,

@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router';
 
 import { EmptyState, ErrorState } from '@/components/common/EmptyState';
 import { ROUTES } from '@/constants/routes';
+import { OrderShipmentsSection } from '@/features/logistics/components/OrderShipmentsSection';
 import { ApiError } from '@/services/http';
 import { formatMoney } from '@/utils/format';
 
@@ -17,8 +18,9 @@ import { useOrder } from '../hooks/useOrders';
  * El endpoint acota por cliente: si el pedido es de otra persona responde 404,
  * así que aquí no hace falta ninguna comprobación de propiedad adicional.
  *
- * Todo lo que se muestra sale de la respuesta. No se añade información de pago
- * ni de logística: Orders no la devuelve, y son los módulos 6 y 7.
+ * Todo lo financiero sale de esta respuesta. El seguimiento del envío no:
+ * Orders no lo devuelve, así que `OrderShipmentsSection` lo consulta aparte
+ * contra Logistics y muestra un envío por cada `PedidoVendedor`.
  */
 export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -118,7 +120,13 @@ export default function OrderDetailPage() {
         )}
 
         <div className="flex flex-col lg:flex-row gap-8 items-start">
-          <div className="flex-1 w-full space-y-6">
+          <div className="flex-1 w-full space-y-8">
+            <OrderShipmentsSection
+              pedidoId={order.orderId}
+              estadoPedido={order.estado}
+              vendedores={order.vendedores}
+            />
+
             <div>
               <h2 className="text-xl font-bold text-foreground mb-4">
                 {order.vendedores.length > 1
