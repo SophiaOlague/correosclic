@@ -3,7 +3,7 @@
 Registro de las pantallas cuyo backend todavía no existe y de los contratos que
 harían falta para conectarlas. Se actualiza al cerrar cada módulo.
 
-**Última actualización:** 2026-07-31 (cierre del Módulo 4 — Checkout)
+**Última actualización:** 2026-08-01 (cierre del Módulo 6 — Payments)
 
 > **Carrito integrado.** `/cart` es el primer módulo enteramente conectado a la
 > API. Para que el flujo funcione de punta a punta pese a que el catálogo sigue
@@ -46,6 +46,37 @@ La corrección sería cambiar la clase base a `ConflictException` y
 autorizado para el backend se limitaba a `JwtStrategy`. Mientras tanto, el
 cliente HTTP traduce cualquier 5xx a un mensaje genérico en español para no
 enseñar "Internal server error" al usuario.
+
+---
+
+## 0b. Payments — lo integrado y lo que falta
+
+`POST /payments/intent` y `GET /payments/order/:orderId` quedaron integrados en
+`/pago/:orderId`. El webhook del backend es la autoridad: la interfaz nunca da
+un pago por bueno con la respuesta del SDK de Stripe.
+
+| Elemento | Estado |
+| --- | --- |
+| Tarjeta | ✅ Integrado con Stripe Payment Element |
+| OXXO, SPEI, Apple Pay, Google Pay | Soportados por el dominio (`MetodoPago`) pero **no expuestos** en el frontend por decisión de alcance. Son asíncronos y el diseño no contempla la espera |
+| Seguimiento tras el pago | Pendiente del Módulo 7 (Logistics). La pantalla de confirmación **no muestra transportista ni fecha estimada**: Orders no los devuelve |
+
+### ✅ Consistencia del agregado al confirmarse el pago
+
+Se detectó que, tras un pago exitoso, `Pedido.estado` pasaba a `PAGADO` pero
+`PedidoVendedor.estado` se quedaba en `PENDIENTE_PAGO`: el detalle mostraba
+"Pagado" en la cabecera y "Pendiente de pago" en cada vendedor.
+
+**Corregido en Payments** (`payment.repository.ts`), no en Logistics: el cambio
+lo provoca el webhook de Stripe, así que es Payments quien debe dejar el
+agregado de Orders consistente **antes** de emitir `OrderReadyForFulfillmentEvent`.
+Logistics solo consume ese evento para iniciar el fulfillment y no toca estados
+de pago.
+
+Dentro de la misma transacción que ya marcaba el pedido, ahora también se
+mueven todos sus `PedidoVendedor` que sigan en `PENDIENTE_PAGO`. Se acota a ese
+estado para no revivir a un vendedor cancelado, y un pago fallido no mueve
+nada.
 
 ---
 

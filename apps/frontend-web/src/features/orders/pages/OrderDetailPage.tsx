@@ -1,4 +1,4 @@
-import { ArrowLeft, ChevronRight, MapPin, Package } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Clock, Lock, MapPin, Package } from 'lucide-react';
 import { Link, useParams } from 'react-router';
 
 import { EmptyState, ErrorState } from '@/components/common/EmptyState';
@@ -92,6 +92,30 @@ export default function OrderDetailPage() {
           </div>
           <OrderStateBadge estado={order.estado} />
         </div>
+
+        {/* El pedido nace PENDIENTE_PAGO y el backend reutiliza el PaymentIntent
+            activo (`createOrReuse`), así que retomar un pago es solo volver a
+            la pantalla de pago. */}
+        {order.estado === 'PENDIENTE_PAGO' && (
+          <div className="bg-white border border-amber-200 rounded-2xl p-5 mb-8 flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <Clock className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold text-foreground">Este pedido está pendiente de pago</p>
+                <p className="text-sm text-muted-foreground">
+                  Tus productos están reservados hasta que completes el pago.
+                </p>
+              </div>
+            </div>
+
+            <Link
+              to={`${ROUTES.payment}/${order.orderId}`}
+              className="bg-primary text-white px-6 h-11 inline-flex items-center gap-2 rounded-xl text-sm font-bold hover:bg-[#C4006A] transition-colors shadow-sm shadow-primary/20"
+            >
+              <Lock className="w-4 h-4" /> Completar pago
+            </Link>
+          </div>
+        )}
 
         <div className="flex flex-col lg:flex-row gap-8 items-start">
           <div className="flex-1 w-full space-y-6">

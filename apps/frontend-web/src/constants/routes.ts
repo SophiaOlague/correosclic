@@ -12,6 +12,7 @@ export const ROUTES = {
 
   cart: '/carrito',
   checkout: '/checkout',
+  payment: '/pago',
 
   account: '/mi-cuenta',
   orders: '/mis-pedidos',

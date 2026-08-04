@@ -43,6 +43,9 @@ const CheckoutPage = lazy(() => import('@/features/checkout/pages/CheckoutPage')
 const OrdersPage = lazy(() => import('@/features/orders/pages/OrdersPage'));
 const OrderDetailPage = lazy(() => import('@/features/orders/pages/OrderDetailPage'));
 
+/* Módulo 6 — Payments (Stripe Elements aislado en features/payments) */
+const PaymentPage = lazy(() => import('@/features/payments/pages/PaymentPage'));
+
 /* Pendientes de migración */
 const AccountScreen = lazyLegacy('AccountScreen');
 const TrackingScreen = lazyLegacy('TrackingScreen');
@@ -82,6 +85,7 @@ export const router = createBrowserRouter([
           { path: ROUTES.account, element: <AccountScreen />, handle: { title: 'Mi cuenta' } },
           { path: ROUTES.orders, element: <OrdersPage />, handle: { title: 'Mis pedidos' } },
           { path: `${ROUTES.orders}/:id`, element: <OrderDetailPage />, handle: { title: 'Detalle del pedido' } },
+          { path: `${ROUTES.payment}/:orderId`, element: <PaymentPage />, handle: { title: 'Pagar pedido' } },
           { path: ROUTES.tracking, element: <TrackingScreen />, handle: { title: 'Rastrear pedido' } },
           { path: ROUTES.becomeSeller, element: <BecomeSellerScreen />, handle: { title: 'Vender' } },
         ],

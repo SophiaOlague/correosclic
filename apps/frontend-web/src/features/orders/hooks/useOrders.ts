@@ -3,6 +3,7 @@ import { useRef } from 'react';
 import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
 
+import { ROUTES } from '@/constants/routes';
 import { cartKeys } from '@/features/cart/hooks/useCart';
 import { checkoutKeys } from '@/features/checkout/hooks/useCheckout';
 import { ordersApi } from '@/services/api/orders.api';
@@ -89,7 +90,8 @@ export function useCreateOrder() {
 
       toast.success(`Pedido ${order.orderNumber} creado`);
 
-      navigate(`/mis-pedidos/${order.orderId}`, { replace: true });
+      // El pedido nace PENDIENTE_PAGO: el siguiente paso del flujo es pagarlo.
+      navigate(`${ROUTES.payment}/${order.orderId}`, { replace: true });
     },
 
     onError: (error) => {
