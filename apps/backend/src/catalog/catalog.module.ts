@@ -13,7 +13,6 @@ import { ProductController } from './controllers/product.controller';
 import { SellerRepository } from './infrastructure/repositories/seller.repository';
 import { VariantRepository } from './infrastructure/repositories/variant.repository';
 import { InventoryRepository } from './infrastructure/repositories/inventory.repository';
-import { ProductImageController } from './product-image/controllers/product-image.controller';
 import { ProductImageService } from './product-image/services/product-image.service';
 import { ProductImageMapper } from './product-image/mappers/product-image.mapper';
 import { ProductImageRepository } from './product-image/repositories/product-image.repository';
@@ -24,7 +23,7 @@ import { StorageModule } from '../storage/storage.module';
 
 @Module({
   imports: [PrismaModule, StorageModule],
-  controllers: [CategoryController, ProductController,ProductImageController],
+  controllers: [CategoryController, ProductController],
   
   providers: [
     CategoryService,
