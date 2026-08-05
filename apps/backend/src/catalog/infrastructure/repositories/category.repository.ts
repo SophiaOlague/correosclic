@@ -26,6 +26,18 @@ export class CategoryRepository {
   });
 }
 
+/** Categorías activas, en el orden en que se muestran al usuario. */
+async findAllActive() {
+  return this.prisma.categoria.findMany({
+    where: {
+      activa: true,
+    },
+    orderBy: {
+      nombre: 'asc',
+    },
+  });
+}
+
 async findBySlug(
   slug: string,
 ) {

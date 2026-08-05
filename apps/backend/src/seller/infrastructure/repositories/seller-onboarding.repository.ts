@@ -36,6 +36,31 @@ export class SellerOnboardingRepository {
     });
   }
 
+  /**
+   * Solicitud vigente del cliente: la más reciente.
+   *
+   * Tras un rechazo el cliente puede volver a solicitar, así que puede haber
+   * varias; la que importa para reanudar el proceso es siempre la última.
+   */
+  async findLatestRequestByClientId(clienteId: string) {
+    return this.prisma.solicitudVendedor.findFirst({
+      where: {
+        clienteId,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      include: {
+        informacionFiscal: true,
+        documentos: {
+          orderBy: {
+            createdAt: 'asc',
+          },
+        },
+      },
+    });
+  }
+
   async findRequestById(id: string) {
     return this.prisma.solicitudVendedor.findUnique({
       where: {
@@ -93,6 +118,17 @@ export class SellerOnboardingRepository {
     });
   }
 
+  /**
+   * Registra un documento y deja la solicitud en el paso DOCUMENTOS.
+   *
+   * No promueve a REVISION aunque ya estén los tres. Hacerlo confundía dos
+   * hechos distintos —"el expediente está completo" y "el solicitante lo
+   * envió"—, y como `submitRequest` escribe ese mismo valor, nada distinguía
+   * uno de otro: el paso de envío quedaba inalcanzable y la cola del
+   * administrador listaba solicitudes que su dueño todavía estaba llenando.
+   *
+   * REVISION lo pone únicamente `submitRequest`, que es el acto del solicitante.
+   */
   async addDocument(
     requestId: string,
     data: {
@@ -112,38 +148,12 @@ export class SellerOnboardingRepository {
         },
       });
 
-      const documents = await tx.documentoVendedor.findMany({
-        where: {
-          solicitudVendedorId: requestId,
-        },
-        select: {
-          tipoDocumento: true,
-        },
-      });
-
-      const uploadedDocuments = new Set(
-        documents.map(document => document.tipoDocumento),
-      );
-
-      const requiredDocuments = [
-        TipoDocumentoVendedor.INE,
-        TipoDocumentoVendedor.CONSTANCIA_SITUACION_FISCAL,
-        TipoDocumentoVendedor.COMPROBANTE_DOMICILIO,
-      ];
-
-      const allRequiredUploaded =
-        requiredDocuments.every(document =>
-          uploadedDocuments.has(document),
-        );
-
       return tx.solicitudVendedor.update({
         where: {
           id: requestId,
         },
         data: {
-          pasoActual: allRequiredUploaded
-            ? 'REVISION'
-            : 'DOCUMENTOS',
+          pasoActual: 'DOCUMENTOS',
         },
         include: {
           documentos: true,

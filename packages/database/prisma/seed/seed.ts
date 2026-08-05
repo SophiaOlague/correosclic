@@ -9,6 +9,7 @@ import { seedUsers } from './users.seed.js';
 import { seedAddresses } from './addresses.seed.js';
 import { seedCatalog } from './catalog.seed.js';
 import { seedShoppingCart } from './shopping-cart.seed.js';
+import { seedLogistics } from './logistics.seed.js';
 
 const prisma = new PrismaClient();
 
@@ -34,6 +35,8 @@ async function main(): Promise<void> {
   await seedZonasTarifarias(prisma);
 
   await seedTarifasEnvio(prisma);
+
+  await seedLogistics(prisma);
 
   console.log('\n🎉 Seed completado correctamente.');
 }

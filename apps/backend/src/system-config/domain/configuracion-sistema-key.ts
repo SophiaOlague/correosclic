@@ -6,6 +6,7 @@ export const ConfiguracionSistemaKey = {
   VOLUMETRIC_FACTOR: 'VOLUMETRIC_FACTOR',
   ADDITIONAL_VENDOR_SHIPPING_FACTOR:
     'ADDITIONAL_VENDOR_SHIPPING_FACTOR',
+  MAX_DELIVERY_ATTEMPTS: 'MAX_DELIVERY_ATTEMPTS',
 } as const;
 
 export type ConfiguracionSistemaKey =

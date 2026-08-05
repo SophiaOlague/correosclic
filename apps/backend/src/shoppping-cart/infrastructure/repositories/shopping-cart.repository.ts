@@ -16,6 +16,13 @@ export class ShoppingCartRepository {
         id: true,
 
         items: {
+          // Sin orden explícito Postgres devuelve las filas en el orden en que
+          // las encuentra, que cambia después de cada UPDATE: la lista del
+          // carrito se reordenaba sola al modificar una cantidad.
+          orderBy: {
+            createdAt: 'asc',
+          },
+
           select: {
             id: true,
             cantidad: true,

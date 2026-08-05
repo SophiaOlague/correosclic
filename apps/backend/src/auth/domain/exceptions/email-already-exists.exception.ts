@@ -1,7 +1,7 @@
-export class EmailAlreadyExistsException extends Error {
+import { ConflictException } from '@nestjs/common';
+
+export class EmailAlreadyExistsException extends ConflictException {
   constructor() {
     super('El correo electrónico ya está registrado.');
-
-    this.name = EmailAlreadyExistsException.name;
   }
 }

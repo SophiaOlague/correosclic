@@ -97,6 +97,25 @@ async findById(
   });
 }
 
+/** La variante con la tienda dueña, para comprobar propiedad antes de tocar su inventario. */
+async findByIdWithStore(
+  variantId: string,
+) {
+  return this.prisma.productoVariante.findUnique({
+    where: {
+      id: variantId,
+    },
+    select: {
+      id: true,
+      producto: {
+        select: {
+          tiendaId: true,
+        },
+      },
+    },
+  });
+}
+
 async findCompleteById(
   variantId: string,
 ) {

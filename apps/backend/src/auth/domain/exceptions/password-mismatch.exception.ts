@@ -1,7 +1,7 @@
-export class PasswordMismatchException extends Error {
+import { BadRequestException } from '@nestjs/common';
+
+export class PasswordMismatchException extends BadRequestException {
   constructor() {
     super('Las contraseñas no coinciden.');
-
-    this.name = PasswordMismatchException.name;
   }
 }

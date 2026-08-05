@@ -5,6 +5,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "build": "pnpm -r --if-present build",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "dev:api": "pnpm --filter backend start:dev",
+    "dev:web": "pnpm --filter @correosclic/frontend-web dev",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

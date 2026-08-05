@@ -1,5 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { EstadoPago, EstadoPedido, MetodoPago } from '@correosclic/database';
+import {
+  EstadoPago,
+  EstadoPedido,
+  EstadoPedidoVendedor,
+  MetodoPago,
+} from '@correosclic/database';
 
 import { PrismaService } from '../../../prisma/prisma.service';
 import { ESTADOS_PAGO_ACTIVOS } from '../../domain/services/payment-state-transition-policy';
@@ -81,9 +86,10 @@ export class PaymentRepository {
   /**
    * Update atómico y condicionado (no lectura-luego-escritura): solo aplica
    * si no hay un evento más reciente ya registrado. Protege contra webhooks
-   * de Stripe fuera de orden. Si marcarPedidoComoPagado es true, el Pedido
-   * pasa a PAGADO en la MISMA transacción -- nunca queda el Pago en EXITOSO
-   * con el Pedido atorado en PENDIENTE_PAGO por un crash a la mitad.
+   * de Stripe fuera de orden. Si marcarPedidoComoPagado es true, el Pedido y
+   * todos sus PedidoVendedor pasan a PAGADO en la MISMA transacción -- nunca
+   * queda el Pago en EXITOSO con el Pedido atorado en PENDIENTE_PAGO, ni el
+   * Pedido pagado con sus vendedores sin pagar, por un crash a la mitad.
    * Devuelve false si el evento era más viejo (se descartó) o si el
    * registro ya no existe.
    */
@@ -135,6 +141,24 @@ export class PaymentRepository {
           data: {
             estado: EstadoPedido.PAGADO,
             fechaPago: new Date(),
+          },
+        });
+
+        // El pago deja consistente todo el agregado antes de que se emita
+        // OrderReadyForFulfillmentEvent: si solo se moviera Pedido.estado, cada
+        // PedidoVendedor seguiria en PENDIENTE_PAGO y el pedido se leeria como
+        // pagado y sin pagar a la vez. Logistics consume el evento para iniciar
+        // el fulfillment, no para corregir estados de pago.
+        //
+        // Se acota a los que siguen en PENDIENTE_PAGO para no revivir a un
+        // vendedor ya cancelado.
+        await tx.pedidoVendedor.updateMany({
+          where: {
+            pedidoId: params.pedidoId,
+            estado: EstadoPedidoVendedor.PENDIENTE_PAGO,
+          },
+          data: {
+            estado: EstadoPedidoVendedor.PAGADO,
           },
         });
       }

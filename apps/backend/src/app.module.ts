@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 
 import { HealthModule } from './health/health.module';
 import { PrismaModule } from './prisma/prisma.module';
@@ -14,6 +15,7 @@ import { CheckoutModule } from './checkout/checkout.module';
 import { OrdersModule } from './orders/orders.module';
 import { IdempotencyModule } from './idempotency/idempotency.module';
 import { PaymentsModule } from './payments/payments.module';
+import { LogisticsModule } from './logistics/logistics.module';
 
 
 @Module({
@@ -22,6 +24,7 @@ import { PaymentsModule } from './payments/payments.module';
       isGlobal: true,
       envFilePath: '.env',
     }),
+    EventEmitterModule.forRoot(),
     PrismaModule,
     IdempotencyModule,
     HealthModule,
@@ -35,6 +38,7 @@ import { PaymentsModule } from './payments/payments.module';
     CheckoutModule,
     OrdersModule,
     PaymentsModule,
+    LogisticsModule,
   ],
 })
 export class AppModule {}

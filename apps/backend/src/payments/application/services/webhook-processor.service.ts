@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { EstadoPago, MetodoPago } from '@correosclic/database';
 import type Stripe from 'stripe';
 
@@ -9,6 +10,11 @@ import { StripeClientService } from '../../infrastructure/stripe/stripe-client.s
 import { StripeStatusMapper } from '../../domain/services/stripe-status-mapper';
 import { StripePaymentMethodMapper } from '../../domain/services/stripe-payment-method-mapper';
 import { PaymentStateTransitionPolicy } from '../../domain/services/payment-state-transition-policy';
+
+import {
+  ORDER_READY_FOR_FULFILLMENT_EVENT,
+  OrderReadyForFulfillmentEvent,
+} from '../../../shared/events/order-ready-for-fulfillment.event';
 
 const EVENTOS_PAYMENT_INTENT = new Set([
   'payment_intent.created',
@@ -34,6 +40,7 @@ export class WebhookProcessorService {
     private readonly statusMapper: StripeStatusMapper,
     private readonly paymentMethodMapper: StripePaymentMethodMapper,
     private readonly transitionPolicy: PaymentStateTransitionPolicy,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async process(event: Stripe.Event): Promise<void> {
@@ -122,6 +129,15 @@ export class WebhookProcessorService {
     if (!aplicado) {
       this.logger.warn(
         `Evento ${event.id} descartado por ser más viejo que el último ya aplicado a Pago ${pago.id}.`,
+      );
+
+      return;
+    }
+
+    if (nuevoEstado === EstadoPago.EXITOSO) {
+      this.eventEmitter.emit(
+        ORDER_READY_FOR_FULFILLMENT_EVENT,
+        new OrderReadyForFulfillmentEvent(pago.pedidoId),
       );
     }
   }

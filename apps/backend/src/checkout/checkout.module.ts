@@ -10,7 +10,7 @@ import { CheckoutRepository } from './infrastructure/repositories/checkout.repos
 import { CheckoutTotalService } from './application/services/checkout-total.service';
 import { ShippingCalculatorService } from './application/services/shipping-calculator.service';
 
-import { HaversineDistanceCalculator } from './domain/services/haversine-distance.calculator';
+import { HaversineDistanceCalculator } from '../shared/geo/haversine-distance.calculator';
 import { SHIPPING_AGGREGATION_STRATEGY } from './domain/services/shipping-aggregation-strategy.interface';
 import { HighestPlusPartialShippingAggregationStrategy } from './domain/services/highest-plus-partial-shipping-aggregation.strategy';
 

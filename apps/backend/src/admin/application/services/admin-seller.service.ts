@@ -11,6 +11,8 @@ import { SellerRequestNotFoundException } from '../../domain/exceptions/seller-r
 
 import { SellerRequestAlreadyReviewedException } from '../../domain/exceptions/seller-request-already-reviewed.exception';
 
+import { InvalidOperatingStateException } from '../../domain/exceptions/invalid-operating-state.exception';
+
 @Injectable()
 export class AdminSellerService {
   constructor(
@@ -98,9 +100,16 @@ export class AdminSellerService {
     })),
   };
 }
+/** Estados disponibles para asignar al aprobar. */
+async findOperatingStates() {
+  return this.repository.findOperatingStates();
+}
+
 //aprobar solicitud
 async approveRequest(
   requestId: string,
+  estadoOperacionId: string,
+  revisorUsuarioId: string,
 ) {
 
   const request =
@@ -113,6 +122,8 @@ async approveRequest(
   if (request.estado !== EstadoSolicitudVendedor.PENDIENTE) {
     throw new SellerRequestAlreadyReviewedException();
   }
+
+  await this.assertOperatingStateIsUsable(estadoOperacionId);
 
   const sellerRole =
     await this.repository.findSellerRole();
@@ -133,12 +144,49 @@ async approveRequest(
     request,
     sellerRole,
     alreadyHasRole,
+    estadoOperacionId,
+    revisorUsuarioId,
   );
 }
+
+/**
+ * El estado debe existir, estar activo y tener coordenadas.
+ *
+ * Es la precondición que `ShipmentCreationService` da por hecha: sin latitud y
+ * longitud no puede resolver la sucursal más cercana y abandona la creación
+ * del envío con un simple aviso en el log.
+ */
+private async assertOperatingStateIsUsable(
+  estadoOperacionId: string,
+): Promise<void> {
+
+  const estado =
+    await this.repository.findStateById(estadoOperacionId);
+
+  if (!estado) {
+    throw new InvalidOperatingStateException(
+      'El estado de operación seleccionado no existe.',
+    );
+  }
+
+  if (!estado.activo) {
+    throw new InvalidOperatingStateException(
+      `El estado ${estado.nombre} no está activo.`,
+    );
+  }
+
+  if (estado.latitud === null || estado.longitud === null) {
+    throw new InvalidOperatingStateException(
+      `El estado ${estado.nombre} no tiene coordenadas registradas, así que no se podrían generar envíos para este vendedor.`,
+    );
+  }
+}
+
 //rechazar solicitud
 async rejectRequest(
   requestId: string,
   comentariosRevision: string,
+  revisorUsuarioId: string,
 ) {
 
   const request =
@@ -155,6 +203,7 @@ async rejectRequest(
   return this.repository.rejectRequest(
     requestId,
     comentariosRevision,
+    revisorUsuarioId,
   );
 }
 }
