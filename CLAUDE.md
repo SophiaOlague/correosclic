@@ -42,11 +42,11 @@ líneas. Se está migrando módulo a módulo a `features/`.
 | 6 | Payments | ✅ integrado (Stripe Elements, solo tarjeta) |
 | 7 | Logistics | ✅ integrado (cliente, vendedor, recepción y reparto) |
 | 8 | Seller | ✅ integrado (onboarding, tienda y catálogo propio) |
-| 9 | Admin | ⬜ pendiente — casi todo mock, solo hay `seller-requests` |
+| 9 | Admin | ✅ integrado (solicitudes, sucursales, vehículos y configuración) |
 
-Quedan **4 pantallas** en `src/app/legacy/FigmaExport.tsx` (1 190 líneas): "Mi
-cuenta" y los tres paneles de administración. Ese archivo desaparece al
-terminar el Módulo 9.
+**La integración está cerrada.** No queda ninguna pantalla del export: toda la
+aplicación vive en `features/`. `src/app/legacy/` y `useViewNavigate` se
+eliminaron en el Módulo 9.
 
 **Lee siempre `apps/frontend-web/PENDING_INTEGRATIONS.md`**: es el registro vivo
 de qué falta en el backend, qué DTOs se esperan y qué decisiones se tomaron.
@@ -60,7 +60,6 @@ No hace falta volver a subir nada de Figma. Todo vive aquí:
 - `src/components/ui/` — 46 componentes shadcn del export
 - `src/styles/theme.css` — tokens de marca: magenta `#E4007C`, verde `#006847`,
   gris de campo `#F5F6F8`, radio `.5rem`, tipografía Inter
-- `src/app/legacy/FigmaExport.tsx` — las pantallas que faltan por migrar
 
 **No rediseñes.** Conserva colores, tipografía, espaciados e iconografía. Las
 pantallas nuevas deben parecer diseñadas originalmente en Figma. No mezcles
@@ -205,14 +204,35 @@ inventario y con stock— porque el carrito rechaza lo contrario. Es
 `ProductPublicationPolicy` quien lo decide; retirar de publicación no se valida
 nunca.
 
+## Admin: solo cuatro secciones son reales
+
+De las 39 secciones que el diseño repartía entre tres paneles administrativos,
+**solo cuatro tienen backend**: solicitudes de vendedor, sucursales, vehículos y
+configuración del sistema. KPIs, gráficas, reportes, auditoría, usuarios,
+empleados, regiones e incidencias se eliminaron en vez de dejarlos con datos de
+ejemplo. **No los reintroduzcas.**
+
+Los nueve endpoints de `admin/` exigen `SUPER_ADMIN`, sin jerarquía. Por eso
+`ADMIN_REGIONAL` y `ADMIN_LOCAL` aterrizan en `/mi-cuenta`: no tienen
+funcionalidad propia y el panel les respondería 403.
+
+Aprobar una solicitud **exige elegir el estado de operación**: de ahí salen las
+coordenadas con las que `ShipmentCreationService` resuelve la sucursal de origen.
+Sin él, el cliente paga y no se genera guía, en silencio.
+
+Tres claves de `ConfiguracionSistemaKey` —`VOLUMETRIC_FACTOR`,
+`PAYMENT_TIMEOUT_MINUTES` y `CURRENCY`— **no las lee ningún servicio** hoy. La
+pantalla las marca "Sin consumidor" en lugar de fingir que mueven un cálculo.
+
+`/mi-cuenta` muestra únicamente lo que la sesión ya conoce (nombre, correo,
+roles), los accesos que corresponden a esos roles y el cierre de sesión. Perfil,
+direcciones, favoritos y seguridad son del futuro módulo de Usuarios.
+
 ## Deuda conocida
 
-- `src/app/legacy/FigmaExport.tsx` — 4 pantallas por extraer
-- `src/hooks/useViewNavigate.ts` — puente temporal entre el `setView("x")` del
-  export y las rutas reales; desaparece con la última pantalla
 - `src/mocks/catalog.mock.ts` — datos volcados de la BD sembrada, con UUIDs
   **reales** para que el carrito funcione. Se borra cuando existan los GET de
   catálogo; solo lo consume `catalog.api.ts`
-- El selector de rol de la navbar es un atajo de demo del diseño
-- Sin jerarquía entre roles: cada ruta de administración exige exactamente el
-  suyo, porque el backend no define ninguna
+- Dependencias que el export arrastra y nadie importa (`canvas-confetti`,
+  `motion`, `react-dnd`, `react-slick`, `react-popper`...); queda por decidir si
+  se eliminan

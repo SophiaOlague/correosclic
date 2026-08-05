@@ -1,16 +1,16 @@
 import { CreditCard, Globe, Shield, Truck } from 'lucide-react';
+import { Link } from 'react-router';
 
-import { useViewNavigate } from '@/hooks/useViewNavigate';
+import { ROUTES } from '@/constants/routes';
 
 /**
  * Pie de página del sitio. Markup extraído sin cambios del export de Figma;
- * la navegación pasa por `useViewNavigate` en lugar del prop `setView`.
+ * la navegación va por rutas reales.
  *
  * TODO: Backend integration pending — los enlaces de las columnas son
  * estáticos; solo "Rastrear pedido" navega, igual que en el diseño original.
  */
 export function Footer() {
-  const setView = useViewNavigate();
   const cols = [
     { title: "Comprar",     links: ["Electrónica", "Moda y ropa", "Hogar y jardín", "Deportes", "Belleza", "Ver todas"] },
     { title: "Vender",      links: ["Cómo vender", "Planes y tarifas", "Centro de recursos", "Soporte vendedor", "Casos de éxito"] },
@@ -48,7 +48,14 @@ export function Footer() {
               <ul className="space-y-3">
                 {col.links.map(link => (
                   <li key={link}>
-                    <button onClick={() => { if (link === "Rastrear pedido") setView("tracking"); }} className="text-sm text-white/50 hover:text-white transition-colors">{link}</button>
+                    {/* "Rastrear pedido" es el único con destino real: Logistics
+                        solo expone los envíos por pedido, así que `/rastreo`
+                        lleva a "Mis pedidos". */}
+                    {link === "Rastrear pedido" ? (
+                      <Link to={ROUTES.tracking} className="text-sm text-white/50 hover:text-white transition-colors">{link}</Link>
+                    ) : (
+                      <span className="text-sm text-white/50 hover:text-white transition-colors">{link}</span>
+                    )}
                   </li>
                 ))}
               </ul>

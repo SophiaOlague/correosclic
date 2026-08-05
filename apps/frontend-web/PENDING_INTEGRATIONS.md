@@ -3,7 +3,8 @@
 Registro de las pantallas cuyo backend todavía no existe y de los contratos que
 harían falta para conectarlas. Se actualiza al cerrar cada módulo.
 
-**Última actualización:** 2026-08-04 (cierre del Módulo 8 — Seller)
+**Última actualización:** 2026-08-04 (cierre del Módulo 9 — Admin; **fin de la
+integración**: ya no queda ninguna pantalla del export de Figma)
 
 > **Carrito integrado.** `/cart` es el primer módulo enteramente conectado a la
 > API. Para que el flujo funcione de punta a punta pese a que el catálogo sigue
@@ -254,6 +255,72 @@ Cada uno en su propio commit, todos aprobados antes de tocar nada:
 
 ---
 
+## 0e. Admin — lo integrado y lo que falta
+
+De las 39 secciones que el diseño repartía entre tres paneles administrativos,
+**solo cuatro tienen backend**. Las otras 35 —KPIs, gráficas, reportes,
+auditoría, usuarios, empleados, regiones, incidencias, pedidos y envíos
+globales— se eliminaron en vez de conservarse con datos de ejemplo: eran
+controles sin ningún endpoint detrás.
+
+| Pantalla | Ruta | Endpoints |
+| --- | --- | --- |
+| Cola de revisión | `/admin/solicitudes` | `GET /admin/seller-requests` |
+| Expediente y resolución | `/admin/solicitudes/:id` | `GET /admin/seller-requests/:id`, `GET /admin/operating-states`, `PATCH .../approve`, `PATCH .../reject` |
+| Sucursales | `/admin/sucursales` | `GET /admin/branches` |
+| Vehículos | `/admin/vehiculos` | `GET /admin/vehicles` |
+| Configuración | `/admin/configuracion` | `GET /admin/system-config`, `PATCH /admin/system-config/:clave` |
+
+El panel vive en una **raíz propia del router**, fuera de `RootLayout`: es un
+dashboard a pantalla completa con sidebar oscuro y barra superior propia, así
+que `AdminLayout` asume el título del documento, el `<Suspense>` de las rutas
+diferidas y el vigilante de caducidad de sesión.
+
+### Estado de operación obligatorio al aprobar
+
+`PATCH /admin/seller-requests/:id/approve` exige `estadoOperacionId` y el
+formulario no ofrece forma de omitirlo. No es un dato administrativo cualquiera:
+`ShipmentCreationService` toma las coordenadas de ese estado para resolver la
+sucursal de origen de cada envío, y un `Vendedor` sin él deja sus pedidos
+pagados **sin guía y en silencio** (el backend solo lo registraba con un
+`logger.warn`). El selector se alimenta de `GET /admin/operating-states`, que
+ya filtra por estado activo **y con coordenadas**.
+
+### Sin jerarquía de roles: solo `SUPER_ADMIN`
+
+Los nueve endpoints de `admin/` llevan `@Roles(SUPER_ADMIN)`. Por eso
+`landingRouteFor` manda a `ADMIN_REGIONAL` y `ADMIN_LOCAL` a `/mi-cuenta` y no
+al panel: no tienen ninguna funcionalidad propia todavía y `/admin/solicitudes`
+les respondería 403. Se actualizará cuando existan sus dashboards.
+
+### ⚠️ Tres claves de configuración sin consumidor
+
+`ConfiguracionSistemaKey` declara siete claves, pero solo cuatro las lee alguien
+hoy: `MARKETPLACE_COMMISSION` e `IVA_PERCENTAGE` (`CheckoutService`),
+`ADDITIONAL_VENDOR_SHIPPING_FACTOR` (`ShippingCalculatorService`) y
+`MAX_DELIVERY_ATTEMPTS` (`LogisticsPlanningEngine`).
+
+`VOLUMETRIC_FACTOR`, `PAYMENT_TIMEOUT_MINUTES` y `CURRENCY` **no las consulta
+ningún servicio**: el cálculo de envío tarifica con el peso real de los
+artículos, Payments no expira los intentos de pago y los importes se formatean
+como MXN en la interfaz. Siguen siendo editables porque existen en la tabla y el
+backend las acepta, pero la pantalla las marca "Sin consumidor" para no dar a
+entender que cambiarlas mueve algún cálculo.
+
+### Elementos del diseño sin respaldo
+
+| Elemento del diseño | Realidad del contrato | Resolución |
+| --- | --- | --- |
+| 11 KPIs, gráficas de ventas por región y de crecimiento de usuarios | No hay endpoints de métricas ni de series de tiempo | Eliminados |
+| Gestión de usuarios, clientes, vendedores, admins, recepcionistas y repartidores | No hay CRUD de usuarios ni de empleados | Eliminada |
+| Regiones, pedidos y envíos globales, incidencias | Existen en Prisma, pero `admin/` no los expone | Eliminados |
+| Reportes y auditoría | `Auditoria` se **escribe** al aprobar y rechazar, pero no hay endpoint de lectura | Eliminados |
+| Alta y edición de sucursales y vehículos | `admin/` solo tiene los `GET` | Las tablas no ofrecen acciones |
+| Buscador global y notificaciones del panel | No hay endpoint de búsqueda administrativa ni módulo de notificaciones | Sustituidos por el enlace "Ir al sitio" |
+| Historial de cambios de configuración | Solo se guarda `updatedAt` | Se muestra la última modificación; se avisa de que el valor anterior se pierde |
+
+---
+
 ## 1. Catálogo público (bloquea el embudo de compra)
 
 **Pantallas afectadas:** Home (`/`), Catálogo (`/catalogo`), Detalle de producto (`/producto/:id`).
@@ -390,18 +457,37 @@ no cuadraran.
 
 ---
 
-## 3. Perfil de usuario
+## 3. Módulo de Usuarios (el siguiente que falta)
 
-**Pantallas afectadas:** Mi cuenta (`/mi-cuenta`).
+**Pantalla afectada:** Mi cuenta (`/mi-cuenta`).
 
-No hay módulo de Usuarios expuesto por HTTP. Lo único disponible es
-`GET /api/auth/ping`, que devuelve `AuthenticatedUserDto`.
+`/mi-cuenta` se reconstruyó desde cero en `features/account` durante el Módulo
+9. Muestra **solo lo que la sesión ya conoce** —`AuthenticatedUserDto`: nombre
+completo, correo y roles—, los accesos a las pantallas que corresponden a esos
+roles y el cierre de sesión. No hace ninguna llamada propia porque no hay a qué
+llamarla.
 
-| Endpoint esperado | Notas |
-| --- | --- |
-| `GET /api/users/me` | Perfil completo (teléfono, fecha de alta, avatar). |
-| `PATCH /api/users/me` | Editar nombre, apellidos, teléfono. |
-| `POST /api/users/me/password` | Cambio de contraseña. |
+La pantalla del export traía además favoritos, direcciones, métodos de pago,
+seguridad y edición de perfil. **No se conservaron ni deshabilitados**: eran
+controles sin ningún endpoint detrás, y un control deshabilitado promete algo
+que no existe. Todo eso pertenece a un módulo de Usuarios que aún no se ha
+construido.
+
+### Lo que haría falta
+
+| Endpoint esperado | Para qué | Estado en Prisma |
+| --- | --- | --- |
+| `GET /api/users/me` | Perfil completo: teléfono, fecha de alta, avatar | `Usuario` ya tiene `telefono`, `createdAt` |
+| `PATCH /api/users/me` | Editar nombre, apellidos y teléfono | — |
+| `POST /api/users/me/password` | Cambio de contraseña | `passwordHash` existe; falta el caso de uso |
+| CRUD de direcciones | Alta y edición desde la cuenta y desde Checkout | Ver la **sección 2**: es el mismo hueco, y bloquea la primera compra de todo cliente nuevo |
+| Favoritos | El corazón de la tarjeta de producto y del detalle | **No hay modelo**: haría falta uno nuevo (`Favorito`) |
+| Sesiones y seguridad | Cerrar sesión en otros dispositivos, verificación en dos pasos | No hay refresh token ni registro de sesiones (ver sección 0) |
+
+Mientras no exista, `/mi-cuenta` sigue siendo el punto de entrada del usuario
+autenticado: los accesos por rol se declaran en
+[`features/account/lib/role-access.ts`](src/features/account/lib/role-access.ts),
+y solo aparecen los destinos a los que ese usuario puede entrar de verdad.
 
 ---
 
@@ -419,20 +505,19 @@ alta. Ver la sección 0d.
 
 ## 5. Métricas, reportes y CRUD administrativo
 
-**Pantallas afectadas:** Admin Local (`/admin/local`), Admin Regional
-(`/admin/regional`), Super Admin (`/admin/super`), y las gráficas de ventas del
-panel de vendedor.
+✅ **Resuelto en lo que tenía backend.** El Módulo 9 integró las cuatro
+secciones reales (ver la sección 0e) y `/admin/local`, `/admin/regional` y
+`/admin/super` desaparecieron con el resto del export.
 
-Del área administrativa **solo existe** la gestión de solicitudes de vendedor:
+Lo que sigue sin existir, y por tanto sin pantalla:
 
-- `GET /api/admin/seller-requests`
-- `GET /api/admin/seller-requests/:id`
-- `PATCH /api/admin/seller-requests/:id/approve`
-- `PATCH /api/admin/seller-requests/:id/reject`
-
-Todo lo demás de esos paneles (KPIs, series de tiempo, gestión de sucursales,
-usuarios, repartidores, zonas tarifarias) **no tiene backend**. Se mantendrá con
-datos mock y su diseño intacto.
+| Falta | Detalle |
+| --- | --- |
+| Métricas y series de tiempo | No hay agregados ni endpoints de reportes, ni para el panel administrativo ni para el de vendedor |
+| CRUD de sucursales, vehículos y zonas tarifarias | `admin/` solo expone lecturas |
+| Gestión de usuarios, empleados y repartidores | No hay módulo HTTP |
+| Lectura de auditoría | `Auditoria` se escribe al aprobar y rechazar solicitudes, pero nada la consulta |
+| Alcance de `ADMIN_REGIONAL` y `ADMIN_LOCAL` | Sin endpoints propios: por menor privilegio, `admin/` es solo de `SUPER_ADMIN` |
 
 ---
 
@@ -454,14 +539,14 @@ representen quedan con mock y navegación funcional.
 
 | Punto | Detalle |
 | --- | --- |
-| `src/app/legacy/FigmaExport.tsx` | Quedan **4 pantallas** en un solo archivo (1 190 líneas): "Mi cuenta" y los tres paneles de administración. El Módulo 7 extrajo `OrderTracking`, `ReceptionistDashboard` y `DriverDashboard`; el Módulo 8, `SellerDashboard` y `BecomeSeller`. Desaparece al terminar el Módulo 9. |
+| ~~`src/app/legacy/FigmaExport.tsx`~~ | **Eliminado en el Módulo 9**, junto con `legacy-screens.tsx` y el directorio `app/legacy/` entero. Sus cuatro últimas pantallas se reconstruyeron en `features/account` y `features/admin`. **Ya no queda ninguna pantalla legacy: toda la aplicación vive en `features/`.** |
 | Cupones de descuento | El campo del carrito es del diseño; no hay modelo ni endpoint de cupones. Avisa "próximamente". |
 | IVA en el carrito | `ShoppingCartDto` no incluye el desglose de IVA (`GET /checkout` sí lo manda en `ivaIncluido`, leyendo `IVA_PERCENTAGE` de la configuración del sistema). Por eso el resumen del carrito indica "IVA incluido" sin cifra y el envío se muestra como "Se calcula en el siguiente paso". |
 | Favoritos | El corazón de la tarjeta de producto y del detalle es solo visual: no existe modelo ni endpoint de favoritos. |
 | Tiendas destacadas | `Tienda` existe en Prisma pero no hay endpoint de lectura; la portada usa contenido estático de `features/catalog/lib/home-content.ts`. |
 | ~~`src/app/legacy/LegacyUiStateProvider.tsx`~~ | **Eliminado en el Módulo 8.** `sellerStatus` lo da `GET /seller/requests/me` y el modo cliente/vendedor se resuelve con rutas y roles reales. |
-| `src/hooks/useViewNavigate.ts` | Traduce el `setView("catalog")` del export a rutas reales. Se elimina cuando todas las pantallas usen `<Link>` / `useNavigate`. |
-| Selector de rol de la navbar | Atajo de demo del diseño de Figma. Con los guards activos, elegir un rol que no se tiene redirige y avisa. Queda por decidir si se retira al cerrar la integración. |
-| Pantalla "Mi cuenta" | La integró el diseño con datos de ejemplo ("María González"). El perfil real depende de un módulo de Usuarios que no existe (ver sección 3). |
-| Jerarquía de roles | Cada ruta de administración exige exactamente su rol: el backend no define ninguna jerarquía, así que un `SUPER_ADMIN` no entra a `/admin/local` salvo que también tenga ese rol. Confirmar si es lo deseado. |
+| ~~`src/hooks/useViewNavigate.ts`~~ | **Eliminado en el Módulo 9.** No lo usaba solo el legacy: `Navbar` y `Footer` también navegaban con él y se migraron a `<Link>` / `useNavigate`. |
+| ~~Selector de rol de la navbar~~ | **Retirado en el Módulo 9.** Era un atajo de demostración que saltaba a cualquier panel sin comprobar nada, y tres de sus opciones apuntaban a rutas que desaparecieron. Los accesos reales están en `AccountMenu` y en `/mi-cuenta`, y dependen de los roles de la sesión. |
+| Pantalla "Mi cuenta" | Reconstruida en `features/account` (Módulo 9), sin los datos de ejemplo del diseño. Lo que falta —perfil editable, direcciones, favoritos, seguridad— es el módulo de Usuarios de la **sección 3**. |
+| Jerarquía de roles | Sigue sin existir: cada ruta exige exactamente su rol porque el backend no define ninguna. En `admin/` es además una decisión explícita de menor privilegio (solo `SUPER_ADMIN`). |
 | Dependencias sin uso | El export arrastra `canvas-confetti`, `motion`, `react-dnd`, `react-dnd-html5-backend`, `react-slick`, `react-responsive-masonry`, `react-popper` y `@popperjs/core`, que no se importan en ningún archivo. Se conservaron para no salirse del alcance acordado; conviene decidir si se eliminan. |

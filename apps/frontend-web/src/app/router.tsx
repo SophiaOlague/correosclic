@@ -1,6 +1,7 @@
-import { lazy } from 'react';
+import { lazy, Suspense } from 'react';
 import { createBrowserRouter, Navigate } from 'react-router';
 
+import { FullPageLoader } from '@/components/common/PageLoader';
 import { RootLayout } from '@/components/layout/RootLayout';
 import { ROLES } from '@/constants/roles';
 import { ROUTES } from '@/constants/routes';
@@ -12,17 +13,13 @@ import { GuestRoute, ProtectedRoute, RoleRoute } from './ProtectedRoute';
  *
  * Todas las rutas se cargan de forma diferida: el bundle inicial solo trae el
  * layout y los providers, y cada pantalla llega en su propio chunk cuando se
- * visita. `RootLayout` envuelve el `<Outlet/>` en `<Suspense>`.
+ * visita. `RootLayout` envuelve el `<Outlet/>` en `<Suspense>`, y `AdminLayout`
+ * hace lo propio en su rama.
  *
- * Las pantallas que aún no se han migrado se resuelven desde
- * `legacy/legacy-screens`, que queda en un chunk aparte del arranque.
+ * Hay dos raíces porque son dos shells distintos: el marketplace (navbar fija +
+ * pie de página) y el panel administrativo (dashboard a pantalla completa con
+ * sidebar oscuro). No queda ninguna pantalla del export de Figma.
  */
-const lazyLegacy = <K extends keyof typeof import('./legacy/legacy-screens')>(name: K) =>
-  lazy(() =>
-    import('./legacy/legacy-screens').then((module) => ({
-      default: module[name] as React.ComponentType,
-    })),
-  );
 
 /* Módulo 1 — Auth (integrado) */
 const LoginPage = lazy(() => import('@/features/auth/pages/LoginPage'));
@@ -60,11 +57,22 @@ const SellerProductDetailPage = lazy(
   () => import('@/features/seller/pages/SellerProductDetailPage'),
 );
 
-/* Pendientes de migración */
-const AccountScreen = lazyLegacy('AccountScreen');
-const AdminLocalScreen = lazyLegacy('AdminLocalScreen');
-const AdminRegionalScreen = lazyLegacy('AdminRegionalScreen');
-const AdminSuperScreen = lazyLegacy('AdminSuperScreen');
+/* Módulo 9 — Admin (las cuatro secciones con backend) */
+const AdminLayout = lazy(() =>
+  import('@/features/admin/components/AdminLayout').then((module) => ({
+    default: module.AdminLayout,
+  })),
+);
+const SellerRequestsPage = lazy(() => import('@/features/admin/pages/SellerRequestsPage'));
+const SellerRequestDetailPage = lazy(
+  () => import('@/features/admin/pages/SellerRequestDetailPage'),
+);
+const BranchesPage = lazy(() => import('@/features/admin/pages/BranchesPage'));
+const VehiclesPage = lazy(() => import('@/features/admin/pages/VehiclesPage'));
+const SystemConfigPage = lazy(() => import('@/features/admin/pages/SystemConfigPage'));
+
+/* Punto de entrada del usuario autenticado, reconstruido en `features/`. */
+const AccountPage = lazy(() => import('@/features/account/pages/AccountPage'));
 
 export const router = createBrowserRouter([
   {
@@ -91,7 +99,7 @@ export const router = createBrowserRouter([
         children: [
           { path: ROUTES.cart, element: <CartPage />, handle: { title: 'Carrito' } },
           { path: ROUTES.checkout, element: <CheckoutPage />, handle: { title: 'Finalizar compra' } },
-          { path: ROUTES.account, element: <AccountScreen />, handle: { title: 'Mi cuenta' } },
+          { path: ROUTES.account, element: <AccountPage />, handle: { title: 'Mi cuenta' } },
           { path: ROUTES.orders, element: <OrdersPage />, handle: { title: 'Mis pedidos' } },
           { path: `${ROUTES.orders}/:id`, element: <OrderDetailPage />, handle: { title: 'Detalle del pedido' } },
           { path: `${ROUTES.payment}/:orderId`, element: <PaymentPage />, handle: { title: 'Pagar pedido' } },
@@ -128,26 +136,56 @@ export const router = createBrowserRouter([
           { path: ROUTES.driver, element: <DriverPage />, handle: { title: 'Repartidor' } },
         ],
       },
-      {
-        element: <RoleRoute roles={[ROLES.adminLocal]} />,
-        children: [
-          { path: ROUTES.adminLocal, element: <AdminLocalScreen />, handle: { title: 'Admin Local' } },
-        ],
-      },
-      {
-        element: <RoleRoute roles={[ROLES.adminRegional]} />,
-        children: [
-          { path: ROUTES.adminRegional, element: <AdminRegionalScreen />, handle: { title: 'Admin Regional' } },
-        ],
-      },
-      {
-        element: <RoleRoute roles={[ROLES.superAdmin]} />,
-        children: [
-          { path: ROUTES.adminSuper, element: <AdminSuperScreen />, handle: { title: 'Super Admin' } },
-        ],
-      },
-
       { path: '*', element: <Navigate to={ROUTES.home} replace /> },
+    ],
+  },
+
+  /*
+   * Panel administrativo: raíz aparte, con su propio shell a pantalla completa.
+   *
+   * Las cuatro secciones exigen `SUPER_ADMIN` porque así lo exigen los nueve
+   * endpoints de `apps/backend/src/admin`. El guard va por encima del layout
+   * para que un rol equivocado ni siquiera monte el sidebar.
+   */
+  {
+    path: ROUTES.admin,
+    element: <RoleRoute roles={[ROLES.superAdmin]} />,
+    children: [
+      {
+        element: (
+          <Suspense fallback={<FullPageLoader label="Cargando el panel..." />}>
+            <AdminLayout />
+          </Suspense>
+        ),
+        children: [
+          { index: true, element: <Navigate to={ROUTES.adminSellerRequests} replace /> },
+          {
+            path: ROUTES.adminSellerRequests,
+            element: <SellerRequestsPage />,
+            handle: { title: 'Solicitudes de vendedor' },
+          },
+          {
+            path: `${ROUTES.adminSellerRequests}/:id`,
+            element: <SellerRequestDetailPage />,
+            handle: { title: 'Revisión de solicitud' },
+          },
+          {
+            path: ROUTES.adminBranches,
+            element: <BranchesPage />,
+            handle: { title: 'Sucursales' },
+          },
+          {
+            path: ROUTES.adminVehicles,
+            element: <VehiclesPage />,
+            handle: { title: 'Vehículos' },
+          },
+          {
+            path: ROUTES.adminSystemConfig,
+            element: <SystemConfigPage />,
+            handle: { title: 'Configuración del sistema' },
+          },
+        ],
+      },
     ],
   },
 ]);

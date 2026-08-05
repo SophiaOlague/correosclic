@@ -35,9 +35,20 @@ export const ROUTES = {
   reception: '/recepcion',
   driver: '/repartidor',
 
-  adminLocal: '/admin/local',
-  adminRegional: '/admin/regional',
-  adminSuper: '/admin/super',
+  /**
+   * Panel administrativo. Las cuatro secciones son exactamente las que tienen
+   * backend (`apps/backend/src/admin`), y las cuatro exigen `SUPER_ADMIN`.
+   *
+   * Sustituyen a `/admin/local`, `/admin/regional` y `/admin/super`, que eran
+   * las tres pantallas mock del export: `ADMIN_LOCAL` y `ADMIN_REGIONAL` no
+   * tienen todavía ninguna funcionalidad propia.
+   */
+  admin: '/admin',
+  /** Detalle de una solicitud: `/admin/solicitudes/:id`. */
+  adminSellerRequests: '/admin/solicitudes',
+  adminBranches: '/admin/sucursales',
+  adminVehicles: '/admin/vehiculos',
+  adminSystemConfig: '/admin/configuracion',
 } as const;
 
 export type RouteKey = keyof typeof ROUTES;

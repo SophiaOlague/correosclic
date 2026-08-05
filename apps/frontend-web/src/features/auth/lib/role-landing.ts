@@ -9,9 +9,16 @@ import { ROUTES } from '@/constants/routes';
  * y se le lleva al panel de mayor responsabilidad.
  */
 const LANDING_BY_ROLE: readonly (readonly [string, string])[] = [
-  [ROLES.superAdmin, ROUTES.adminSuper],
-  [ROLES.adminRegional, ROUTES.adminRegional],
-  [ROLES.adminLocal, ROUTES.adminLocal],
+  [ROLES.superAdmin, ROUTES.adminSellerRequests],
+  /*
+   * `ADMIN_REGIONAL` y `ADMIN_LOCAL` aterrizan en "Mi cuenta", no en el panel.
+   *
+   * No tienen todavía ninguna funcionalidad propia y los nueve endpoints de
+   * `admin/` exigen `SUPER_ADMIN`, así que mandarlos a `/admin/solicitudes`
+   * sería llevarlos a un 403 seguro. Se actualizará cuando existan sus paneles.
+   */
+  [ROLES.adminRegional, ROUTES.account],
+  [ROLES.adminLocal, ROUTES.account],
   [ROLES.recepcion, ROUTES.reception],
   [ROLES.repartidor, ROUTES.driver],
   [ROLES.vendedor, ROUTES.sellerDashboard],

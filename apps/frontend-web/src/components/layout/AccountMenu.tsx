@@ -14,8 +14,6 @@ import { ROLES } from '@/constants/roles';
 import { ROUTES } from '@/constants/routes';
 import { useAuth } from '@/hooks/useAuth';
 
-import { landingRouteFor } from '@/features/auth/lib/role-landing';
-
 /**
  * Reemplaza el botón estático "Mi cuenta" del export por el control real de
  * sesión: invita a entrar si no hay sesión y ofrece cerrarla si la hay.
@@ -58,18 +56,23 @@ export function AccountMenu() {
 
         <DropdownMenuSeparator />
 
-        <DropdownMenuItem onSelect={() => navigate(landingRouteFor(user.roles))}>
+        {/* "Mi cuenta" es la pantalla de cuenta, no el panel del rol: desde
+            ella se llega a los accesos que correspondan al usuario. */}
+        <DropdownMenuItem onSelect={() => navigate(ROUTES.account)}>
           <User className="w-4 h-4 text-muted-foreground" />
           Mi cuenta
         </DropdownMenuItem>
 
-        <DropdownMenuItem onSelect={() => navigate(ROUTES.orders)}>
-          <Package className="w-4 h-4 text-muted-foreground" />
-          Mis pedidos
-        </DropdownMenuItem>
+        {/* `GET /orders` resuelve el `Cliente` del usuario y responde 404 si no
+            lo tiene, que es el caso de los empleados y del administrador. */}
+        {hasRole(ROLES.cliente) && (
+          <DropdownMenuItem onSelect={() => navigate(ROUTES.orders)}>
+            <Package className="w-4 h-4 text-muted-foreground" />
+            Mis pedidos
+          </DropdownMenuItem>
+        )}
 
-        {/* Único acceso a los envíos que el vendedor debe llevar a sucursal:
-            el panel de vendedor todavía es la pantalla del export (Módulo 8). */}
+        {/* Acceso directo a los envíos que el vendedor debe llevar a sucursal. */}
         {hasRole(ROLES.vendedor) && (
           <DropdownMenuItem onSelect={() => navigate(ROUTES.vendorShipments)}>
             <Truck className="w-4 h-4 text-muted-foreground" />
